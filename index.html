@@ -2,20 +2,20 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Safety Officer | V2.6.0 Operations</title>
+    <title>Safety Officer by NT | V2.6.1</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
         body { background: #020617; color: white; font-family: 'Orbitron', sans-serif; font-style: italic; }
         .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .fat-finger { height: 70px; font-weight: 900; text-transform: uppercase; border-radius: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; width: 100%; }
-        .matrix-blink { animation: blink 1.5s infinite; border: 2px solid #10b981; }
-        @keyframes blink { 0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); } 50% { box-shadow: none; } }
+        .fat-finger { height: 75px; font-weight: 900; text-transform: uppercase; border-radius: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
+        .fat-finger:active { transform: scale(0.95); }
+        input[type="password"] { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 20px; border-radius: 1rem; color: white; text-align: center; font-size: 24px; width: 100%; outline: none; }
+        select { background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 1rem; color: white; width: 100%; font-weight: bold; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -37,17 +37,19 @@
             { id: 'ALX04', name: 'RIGEL III', type: 'STANDARD', shift: '15:00-17:00' }
         ];
 
-        const SafetyOfficerV260 = () => {
+        const SafetyOfficerV261 = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [passInput, setPassInput] = useState("");
             const [view, setView] = useState('WATCHLIST');
+            const [academyCleared, setAcademyCleared] = useState(() => localStorage.getItem('ntg_academy_ok') === 'true');
+            
             const [completedVessels, setCompletedVessels] = useState(() => {
                 const saved = JSON.parse(localStorage.getItem('ntg_completed_today') || '{}');
                 const lastDate = localStorage.getItem('ntg_last_date');
                 const today = new Date().toLocaleDateString();
-                // AUTO-RESET LOGIC
                 if (lastDate !== today) {
                     localStorage.setItem('ntg_last_date', today);
-                    return {};
+                    return {}; // Auto-reset at end of day
                 }
                 return saved;
             });
@@ -60,10 +62,16 @@
             const [gas, setGas] = useState({ o2: '', lel: '' });
             const [checks, setChecks] = useState({ fire: false, gasFree: false });
 
+            useEffect(() => { localStorage.setItem('ntg_academy_ok', academyCleared); }, [academyCleared]);
             useEffect(() => { localStorage.setItem('ntg_completed_today', JSON.stringify(completedVessels)); }, [completedVessels]);
 
+            const handleLogin = () => {
+                if (passInput === MASTER_PASSCODE) setIsAuthenticated(true);
+                else { alert("WRONG PASSCODE"); setPassInput(""); }
+            };
+
             const handleSign = () => {
-                const log = { vessel: activeVessel.name, ts: new Date().toLocaleString(), tasks: selectedTasks, area: selectedArea, remarks, gas };
+                const log = { vessel: activeVessel.name, ts: new Date().toLocaleString(), area: selectedArea, tasks: selectedTasks, remarks };
                 const logs = JSON.parse(localStorage.getItem('ntg_M2_logs') || '[]');
                 logs.push(log);
                 localStorage.setItem('ntg_M2_logs', JSON.stringify(logs));
@@ -73,21 +81,96 @@
 
             if (!isAuthenticated) return (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
-                    <div className="glass p-10 rounded-[2.5rem] w-full max-w-sm text-center border-t-4 border-blue-500">
-                        <h2 className="text-xl font-black mb-6 italic">SECURE ACCESS</h2>
-                        <input type="password" onChange={(e) => e.target.value === MASTER_PASSCODE && setIsAuthenticated(true)} 
-                               className="w-full bg-black/40 p-5 rounded-xl text-center text-2xl tracking-[0.5em] outline-none border border-white/10" placeholder="****" />
+                    <div className="glass p-10 rounded-[2.5rem] w-full max-w-sm text-center">
+                        <h2 className="text-xl font-black mb-8">SECURE ACCESS</h2>
+                        <input type="password" value={passInput} onChange={(e) => setPassInput(e.target.value)} placeholder="****" maxLength="4" />
+                        <button onClick={handleLogin} className="fat-finger w-full bg-blue-600 mt-6">Unlock</button>
                     </div>
                 </div>
             );
 
             if (view === 'WATCHLIST') return (
                 <div className="p-6">
-                    <header className="glass p-6 rounded-[2rem] mb-8 border-l-4 border-blue-500">
-                        <h1 className="text-sm font-black text-blue-500">SAFETY OFFICER V2.6.0</h1>
-                        <p className="text-[10px] opacity-50 uppercase mt-2">Date: {new Date().toLocaleDateString()}</p>
+                    <header className="glass p-6 rounded-[2rem] border-l-4 border-blue-500 mb-8 flex justify-between items-center">
+                        <div><h1 className="text-sm font-black text-blue-500">Safety Officer</h1><p className="text-[7px] opacity-40 uppercase">v2.6.1</p></div>
+                        <button onClick={() => setView('ACADEMY')} className={`text-[8px] font-black p-2 rounded-xl ${academyCleared ? 'text-emerald-500' : 'text-red-500 animate-pulse'}`}>
+                            {academyCleared ? 'ACADEMY OK' : 'ACADEMY LOCK'}
+                        </button>
                     </header>
                     <div className="space-y-4">
                         {SEPE_SCHEDULE.map(v => (
-                            <div key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); setSelectedTasks([]); setRemarks(""); setPhotos([]); }} 
-                                 className="glass p-6 rounded-[2rem
+                            <div key={v.id} onClick={() => { if(!academyCleared && v.type === 'LNG_CONV') return; setActiveVessel(v); setView('INSPECTION'); setSelectedArea(""); setSelectedTasks([]); setRemarks(""); setPhotos([]); }} 
+                                 className={`glass p-6 rounded-[2rem] flex justify-between items-center border-l-4 ${v.type === 'LNG_CONV' && !academyCleared ? 'opacity-30 border-red-900' : 'border-blue-600 active:scale-95'}`}>
+                                <div><p className="text-xs font-black">{v.name}</p><p className="text-[8px] opacity-40 uppercase">{v.shift}</p></div>
+                                {completedVessels[v.id] && <i className="fa-solid fa-check-circle text-emerald-500 text-xl"></i>}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            if (view === 'ACADEMY') return (
+                <div className="min-h-screen p-8 flex flex-col justify-center">
+                    <div className="glass p-8 rounded-[3rem] space-y-6 border-l-4 border-blue-500">
+                        <h2 className="text-xl font-black text-blue-500 italic">KNOWLEDGE GATE</h2>
+                        <p className="text-[10px] opacity-70 uppercase font-black leading-relaxed">Confirm Study of ISGOTT V6 and P.D. 70/1990 for FSRU ALX Operations.</p>
+                        <button onClick={() => {setAcademyCleared(true); setView('WATCHLIST');}} className="fat-finger w-full bg-blue-600">I Confirm</button>
+                    </div>
+                </div>
+            );
+
+            const isLNG = activeVessel?.type === 'LNG_CONV';
+            const canSign = photos.length >= 2 && selectedTasks.length > 0 && (!isLNG || (gas.o2 && gas.lel));
+
+            return (
+                <div className="p-6 pb-64">
+                    <button onClick={() => setView('WATCHLIST')} className="text-[9px] font-black text-blue-500 mb-6 uppercase tracking-widest">← Return</button>
+                    <div className="glass p-6 rounded-[2rem] border-l-4 border-emerald-500 mb-6 text-center">
+                        <h2 className="text-xl font-black uppercase">{activeVessel.name}</h2>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div className="glass p-6 rounded-[2rem] space-y-4">
+                            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Area Selection</p>
+                            <select onChange={(e) => {setSelectedArea(e.target.value); setSelectedTasks([]);}}>
+                                <option value="">Select Area...</option>
+                                {Object.keys(WORK_AREAS).map(a => <option key={a} value={a}>{a}</option>)}
+                            </select>
+                            
+                            {selectedArea && (
+                                <div className="grid grid-cols-1 gap-2 pt-2 text-[10px] font-black">
+                                    {WORK_AREAS[selectedArea].map(task => (
+                                        <label key={task} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                                            <input type="checkbox" onChange={(e) => e.target.checked ? setSelectedTasks([...selectedTasks, task]) : setSelectedTasks(selectedTasks.filter(t => t !== task))} className="w-5 h-5 accent-emerald-500" />
+                                            {task}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="glass p-6 rounded-[2rem] space-y-4">
+                            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Observations</p>
+                            <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Type observations here..." className="w-full bg-black/20 p-4 rounded-xl text-[10px] h-24 outline-none border border-white/5" />
+                        </div>
+
+                        {isLNG && (
+                            <div className="glass p-6 rounded-[2rem] space-y-4 border-l-4 border-red-500">
+                                <p className="text-[9px] font-black text-red-500 uppercase">LNG Gas Monitoring</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <input type="number" placeholder="O2 %" value={gas.o2} onChange={(e)=>setGas({...gas, o2: e.target.value})} className="bg-black/40 p-4 rounded-xl text-center text-xs font-bold" />
+                                    <input type="number" placeholder="LEL %" value={gas.lel} onChange={(e)=>setGas({...gas, lel: e.target.value})} className="bg-black/40 p-4 rounded-xl text-center text-xs font-bold" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="fixed bottom-6 left-6 right-6 space-y-3 glass p-4 rounded-[2rem]">
+                        <button onClick={() => setPhotos([...photos, Date.now()])} className="fat-finger bg-slate-800">Photo Evidence ({photos.length}/2)</button>
+                        <button disabled={!canSign} onClick={handleSign} className={`fat-finger ${canSign ? 'bg-emerald-600' : 'bg-slate-900 opacity-40'}`}>Sign Shift</button>
+                    </div>
+                </div>
+            );
+        };
+        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV261 />);
+    </script></body></html>
