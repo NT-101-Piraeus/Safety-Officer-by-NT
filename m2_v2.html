@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Safety Officer by NT | M2 Division v2.1</title>
+    <title>Safety Officer by NT | All-In-One</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -10,13 +10,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
-        body { background: #020617; color: white; font-family: 'Orbitron', sans-serif; font-style: italic; overflow-x: hidden; }
+        body { background: #020617; color: white; font-family: 'Orbitron', sans-serif; font-style: italic; }
         .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .fat-finger { height: 75px; font-weight: 900; text-transform: uppercase; border-radius: 1.5rem; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .fat-finger { height: 75px; font-weight: 900; text-transform: uppercase; border-radius: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; }
         .fat-finger:active { transform: scale(0.95); }
-        select { background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 1rem; color: white; width: 100%; font-weight: bold; text-transform: uppercase; font-size: 11px; }
-        .matrix-blink { animation: blink 1.5s infinite; }
-        @keyframes blink { 0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); border-color: #10b981; } 50% { box-shadow: none; border-color: transparent; } }
+        .matrix-blink { animation: blink 1.5s infinite; border: 2px solid #10b981; }
+        @keyframes blink { 0%, 100% { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); } 50% { box-shadow: none; } }
     </style>
 </head>
 <body>
@@ -24,167 +23,104 @@
     <script type="text/babel">
         const { useState } = React;
 
-        // Telemetry Module (M10 Black Box)
-        const Telemetry = {
-            log: (action, details) => {
-                const logs = JSON.parse(localStorage.getItem('ntg_M2_logs') || '[]');
-                logs.push({ ts: new Date().toISOString(), action, details });
-                localStorage.setItem('ntg_M2_logs', JSON.stringify(logs));
-                console.log("Telemetry Logged:", action);
-            }
-        };
-
-        const SafetyOfficerV2 = () => {
-            const [view, setView] = useState('WATCHLIST');
-            const [activeVessel, setActiveVessel] = useState(null);
-            const [completedVessels, setCompletedVessels] = useState({});
+        const SafetyOfficerV25 = () => {
+            const [view, setView] = useState('WATCHLIST'); // WATCHLIST, ACADEMY, INSPECTION
+            const [academyCleared, setAcademyCleared] = useState(false);
+            const [completed, setCompleted] = useState({});
             
             // Inspection States
+            const [activeVessel, setActiveVessel] = useState(null);
             const [photos, setPhotos] = useState([]);
             const [tasks, setTasks] = useState([]);
-            const [selectedArea, setSelectedArea] = useState('Main Deck');
-            const [selectedJob, setSelectedJob] = useState('Hot Works');
-            
-            // Compliance States (P.D. 70/1990 & LNG)
-            const [checks, setChecks] = useState({ fireWatch: false, gasFree: false });
-            const [gasLevels, setGasLevels] = useState({ o2: '', lel: '' });
+            const [gas, setGas] = useState({ o2: '', lel: '' });
+            const [checks, setChecks] = useState({ fire: false, gasFree: false });
 
-            const vessels = [
-                { id: 1, name: 'MT FELIX', type: 'LNG_CONV', status: 'ACTIVE' },
-                { id: 2, name: 'BADJI MOKHTAR III', type: 'LNG_CONV', status: 'ACTIVE' },
-                { id: 3, name: 'ΑΡΙΑΔΝΗ', type: 'STANDARD', status: 'ACTIVE' },
-                { id: 4, name: 'RIGEL III', type: 'STANDARD', status: 'ACTIVE' }
+            const fleet = [
+                { id: 1, name: 'MT FELIX', type: 'LNG_CONV', shift: '07:00-11:00' },
+                { id: 2, name: 'BADJI MOKHTAR III', type: 'LNG_CONV', shift: '11:00-13:00' },
+                { id: 3, name: 'ΑΡΙΑΔΝΗ', type: 'STANDARD', shift: '13:00-15:00' },
+                { id: 4, name: 'RIGEL III', type: 'STANDARD', shift: '15:00-17:00' }
             ];
 
-            const openInspection = (v) => {
-                setActiveVessel(v);
-                setView('INSPECTION');
-                // Reset session
-                setPhotos([]); setTasks([]); setChecks({ fireWatch: false, gasFree: false }); setGasLevels({ o2: '', lel: '' });
-                Telemetry.log('SHIFT_START', `Boarded ${v.name}`);
-            };
+            const canSign = photos.length >= 2 && tasks.length > 0 && checks.fire && checks.gasFree && (activeVessel?.type !== 'LNG_CONV' || (gas.o2 && gas.lel));
 
-            const addTask = () => setTasks([...tasks, { id: Date.now(), area: selectedArea, job: selectedJob }]);
-
-            // Hard Evidence Lock Logic
-            const isLNG = activeVessel?.type === 'LNG_CONV';
-            const gasValid = isLNG ? (gasLevels.o2 !== '' && gasLevels.lel !== '') : true;
-            const checksValid = checks.fireWatch && checks.gasFree;
-            const canSign = photos.length >= 2 && tasks.length > 0 && checksValid && gasValid;
-
-            const handleSignLog = () => {
-                if (!canSign) return;
-                alert(`Daily Log for ${activeVessel.name} Locked & Signed!`);
-                Telemetry.log('SHIFT_SIGNED', `Completed ${activeVessel.name}. Tasks: ${tasks.length}`);
-                setCompletedVessels({...completedVessels, [activeVessel.id]: true});
-                setView('WATCHLIST');
-            };
-
+            // --- VIEWS ---
             if (view === 'WATCHLIST') return (
                 <div className="min-h-screen p-6">
-                    <header className="flex justify-between items-center mb-10 glass p-6 rounded-[2rem] border-l-4 border-blue-500">
+                    <header className="glass p-6 rounded-[2rem] border-l-4 border-blue-500 mb-8 flex justify-between items-center">
                         <div>
-                            <h1 className="text-sm font-black uppercase text-blue-500 tracking-tighter">Safety Officer</h1>
-                            <p className="text-[7px] opacity-40 font-bold uppercase tracking-widest">by Nautical Technology</p>
+                            <h1 className="text-sm font-black uppercase text-blue-500">Safety Officer by NT</h1>
+                            <p className="text-[7px] opacity-40 uppercase font-black">Autonomous Division V2.5</p>
                         </div>
-                        <i className="fa-solid fa-shield-halved text-2xl text-blue-900/50"></i>
+                        <button onClick={() => setView('ACADEMY')} className={`p-3 rounded-xl text-[8px] font-black uppercase ${academyCleared ? 'bg-emerald-500/20 text-emerald-500' : 'bg-red-500/20 text-red-500'}`}>
+                            {academyCleared ? 'Clearance Active' : 'Clearance Required'}
+                        </button>
                     </header>
 
-                    <p className="text-[9px] uppercase font-black opacity-30 mb-4 ml-2 tracking-widest">Active Operations</p>
                     <div className="space-y-4">
-                        {vessels.map(v => (
-                            <div key={v.id} onClick={() => openInspection(v)} className="glass p-6 rounded-[2.5rem] flex justify-between items-center border-l-4 border-blue-600 active:scale-95 cursor-pointer">
+                        {fleet.map(v => (
+                            <div key={v.id} onClick={() => { 
+                                if(!academyCleared && v.type === 'LNG_CONV') return alert("COMPLETE ACADEMY FIRST!");
+                                setActiveVessel(v); setView('INSPECTION'); 
+                            }} className={`glass p-6 rounded-[2.5rem] flex justify-between items-center border-l-4 ${v.type === 'LNG_CONV' && !academyCleared ? 'opacity-30 border-red-900' : 'border-blue-600'}`}>
                                 <div>
-                                    <p className="text-xs font-black uppercase italic tracking-tight">{v.name}</p>
-                                    <p className="text-[8px] opacity-40 uppercase font-black tracking-widest mt-1">{v.type}</p>
+                                    <p className="text-xs font-black uppercase italic">{v.name}</p>
+                                    <p className="text-[8px] opacity-40 uppercase mt-1">{v.shift} | {v.type}</p>
                                 </div>
-                                <div>
-                                    {completedVessels[v.id] 
-                                        ? <i className="fa-solid fa-check-circle text-emerald-500 text-xl"></i>
-                                        : <i className="fa-solid fa-chevron-right opacity-30"></i>
-                                    }
-                                </div>
+                                {completed[v.id] ? <i className="fa-solid fa-check-circle text-emerald-500 text-xl"></i> : <i className="fa-solid fa-chevron-right opacity-20"></i>}
                             </div>
                         ))}
                     </div>
                 </div>
             );
 
+            if (view === 'ACADEMY') return (
+                <div className="min-h-screen p-8 space-y-6">
+                    <h2 className="text-xl font-black uppercase italic text-blue-500 text-center">Internal Academy</h2>
+                    <div className="glass p-6 rounded-3xl space-y-4 text-[10px] leading-relaxed">
+                        <p className="text-orange-500 font-black">REQUIRED STUDY: FSRU ALEXANDROUPOLIS</p>
+                        <p>1. ISGOTT V6: O2 must be 20.9% and LEL 0% for Hot Works.</p>
+                        <p>2. P.D. 70/1990: Fire Watch and Gas-Free Certs are Mandatory.</p>
+                        <p>3. SIMOPS: Coordinate all lifting with Crane Operators.</p>
+                    </div>
+                    <button onClick={() => { setAcademyCleared(true); setView('WATCHLIST'); }} className="fat-finger w-full bg-emerald-600 text-white">Confirm Study & Unlock Shift</button>
+                </div>
+            );
+
             return (
                 <div className="min-h-screen p-6 pb-64">
-                    <button onClick={() => setView('WATCHLIST')} className="text-[9px] underline text-blue-500 mb-6 uppercase font-black italic tracking-widest">← Exit Inspection</button>
-                    
                     <div className="glass p-8 rounded-[3rem] text-center mb-8 border-l-4 border-emerald-500">
-                        <h2 className="text-2xl font-black uppercase italic tracking-tighter">{activeVessel.name}</h2>
-                        <p className="text-[8px] text-emerald-500 font-black uppercase tracking-widest italic mt-1">Operational Mode Active</p>
+                        <h2 className="text-2xl font-black uppercase italic">{activeVessel.name}</h2>
+                        <p className="text-[8px] text-emerald-500 font-black uppercase mt-1 tracking-widest">In-App Compliance Active</p>
                     </div>
 
                     <div className="space-y-6">
-                        {/* Job Builder */}
-                        <div className="glass p-6 rounded-[2rem] space-y-4">
-                            <h4 className="text-[10px] font-black uppercase text-blue-400 italic">Joblist Builder</h4>
-                            <div className="grid grid-cols-2 gap-3">
-                                <select onChange={(e) => setSelectedArea(e.target.value)}>
-                                    <option>Main Deck</option><option>Engine Room</option><option>Pump Room</option>
-                                </select>
-                                <select onChange={(e) => setSelectedJob(e.target.value)}>
-                                    <option>Hot Works</option><option>Confined Space</option><option>Lifting Ops</option>
-                                </select>
-                            </div>
-                            <button onClick={addTask} className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 h-12 rounded-xl font-black uppercase text-[10px] italic active:scale-95">Add Task +</button>
-                            
-                            {tasks.length > 0 && (
-                                <div className="space-y-2 mt-4 pt-4 border-t border-white/10">
-                                    {tasks.map(t => (
-                                        <div key={t.id} className="bg-slate-900/50 p-4 rounded-xl text-[9px] font-black uppercase flex justify-between items-center border-l-2 border-emerald-500">
-                                            <span className="opacity-70">{t.area}</span>
-                                            <span className="text-emerald-500">{t.job}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Legal Compliance (Appears only if tasks exist) */}
+                        <button onClick={() => setTasks([...tasks, 1])} className="w-full h-14 glass border border-blue-500/30 text-[10px] font-black uppercase italic">Add Compliance Task +</button>
+                        
                         {tasks.length > 0 && (
-                            <div className="glass p-6 rounded-[2rem] space-y-5 border-l-4 border-orange-500">
-                                <h4 className="text-[10px] font-black uppercase text-orange-500 italic">P.D. 70/1990 Requirements</h4>
+                            <div className="glass p-6 rounded-[2rem] space-y-4 border-l-4 border-orange-500">
+                                <label className="flex items-center gap-4"><input type="checkbox" onChange={(e)=>setChecks({...checks, fire: e.target.checked})} className="w-5 h-5 accent-orange-500" /><span className="text-[10px] font-black uppercase">Fire Watch Set</span></label>
+                                <label className="flex items-center gap-4"><input type="checkbox" onChange={(e)=>setChecks({...checks, gasFree: e.target.checked})} className="w-5 h-5 accent-orange-500" /><span className="text-[10px] font-black uppercase">Gas-Free Verified</span></label>
                                 
-                                <label className="flex items-center gap-4 cursor-pointer">
-                                    <input type="checkbox" checked={checks.fireWatch} onChange={(e) => setChecks({...checks, fireWatch: e.target.checked})} className="w-5 h-5 rounded accent-orange-600" />
-                                    <span className={`text-[10px] uppercase font-black transition-all ${checks.fireWatch ? 'text-white' : 'text-slate-500'}`}>Fire Watch Established</span>
-                                </label>
-                                <label className="flex items-center gap-4 cursor-pointer">
-                                    <input type="checkbox" checked={checks.gasFree} onChange={(e) => setChecks({...checks, gasFree: e.target.checked})} className="w-5 h-5 rounded accent-orange-600" />
-                                    <span className={`text-[10px] uppercase font-black transition-all ${checks.gasFree ? 'text-white' : 'text-slate-500'}`}>Gas-Free Verified</span>
-                                </label>
-
-                                {/* LNG Mode */}
-                                {isLNG && (
-                                    <div className="pt-4 border-t border-white/10 space-y-3">
-                                        <h4 className="text-[9px] font-black uppercase text-red-500 italic">LNG Limits (ISGOTT)</h4>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <input type="number" placeholder="O2 % (20.9)" value={gasLevels.o2} onChange={(e) => setGasLevels({...gasLevels, o2: e.target.value})} className="bg-slate-900 p-4 rounded-xl text-white text-[10px] font-bold outline-none border border-white/5 text-center" />
-                                            <input type="number" placeholder="LEL % (0)" value={gasLevels.lel} onChange={(e) => setGasLevels({...gasLevels, lel: e.target.value})} className="bg-slate-900 p-4 rounded-xl text-white text-[10px] font-bold outline-none border border-white/5 text-center" />
-                                        </div>
+                                {activeVessel.type === 'LNG_CONV' && (
+                                    <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                                        <input type="number" placeholder="O2 %" value={gas.o2} onChange={(e)=>setGas({...gas, o2: e.target.value})} className="bg-black/40 p-4 rounded-xl text-center text-xs outline-none" />
+                                        <input type="number" placeholder="LEL %" value={gas.lel} onChange={(e)=>setGas({...gas, lel: e.target.value})} className="bg-black/40 p-4 rounded-xl text-center text-xs outline-none" />
                                     </div>
                                 )}
                             </div>
                         )}
                     </div>
 
-                    {/* Fixed Bottom Controls */}
-                    <div className="fixed bottom-6 left-6 right-6 space-y-3 glass p-4 rounded-[2rem] border-t border-white/10 z-50">
-                        <button onClick={() => setPhotos([...photos, 1])} className="fat-finger w-full bg-slate-800 text-white border border-slate-700 shadow-xl">
-                            <i className="fa-solid fa-camera"></i> Capture Evidence ({photos.length}/2)
-                        </button>
-                        <button disabled={!canSign} onClick={handleSignLog} 
-                                className={`fat-finger w-full ${canSign ? 'bg-emerald-600 text-white matrix-blink' : 'bg-slate-900 text-slate-600 opacity-50 border border-white/5'}`}>
-                            <i className="fa-solid fa-file-signature"></i> {canSign ? "Sign Daily Log" : "Evidence Missing"}
-                        </button>
+                    <div className="fixed bottom-6 left-6 right-6 space-y-3 glass p-4 rounded-[2rem]">
+                        <button onClick={() => setPhotos([...photos, 1])} className="fat-finger w-full bg-slate-800 text-white">Capture Evidence ({photos.length}/2)</button>
+                        <button disabled={!canSign} onClick={() => { setCompleted({...completed, [activeVessel.id]: true}); setView('WATCHLIST'); }} 
+                                className={`fat-finger w-full ${canSign ? 'bg-emerald-600 matrix-blink' : 'bg-slate-900 opacity-50'}`}>Sign Daily Log</button>
                     </div>
                 </div>
             );
         };
-        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV2 />);
-    </script></body></html>
+        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV25 />);
+    </script>
+</body>
+</html>
