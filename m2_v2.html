@@ -2,11 +2,12 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Safety Officer by NT | V2.5.3 Dynamic</title>
+    <title>Safety Officer by NT | V2.5.4 FINAL</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
@@ -24,7 +25,6 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // --- STEP 4: DYNAMIC FLEET CONFIG (ΑΛΛΑΞΕ ΤΑ ΕΔΩ) ---
         const SEPE_SCHEDULE = [
             { id: 'ALX01', name: 'MT FELIX', type: 'LNG_CONV', shift: '07:00-11:00', imo: '9464182' },
             { id: 'ALX02', name: 'BADJI MOKHTAR III', type: 'LNG_CONV', shift: '11:00-13:00', imo: '9827889' },
@@ -32,7 +32,7 @@
             { id: 'ALX04', name: 'RIGEL III', type: 'STANDARD', shift: '15:00-17:00', imo: '7807744' }
         ];
 
-        const SafetyOfficerV253 = () => {
+        const SafetyOfficerV254 = () => {
             const [view, setView] = useState('WATCHLIST');
             const [academyCleared, setAcademyCleared] = useState(() => localStorage.getItem('ntg_academy_ok') === 'true');
             const [completedVessels, setCompletedVessels] = useState(() => JSON.parse(localStorage.getItem('ntg_completed_today') || '{}'));
@@ -40,48 +40,63 @@
             const [activeVessel, setActiveVessel] = useState(null);
             const [photos, setPhotos] = useState([]);
             const [tasks, setTasks] = useState([]);
-            const [selectedArea, setSelectedArea] = useState('Main Deck');
-            const [selectedJob, setSelectedJob] = useState('Hot Works');
             const [checks, setChecks] = useState({ fire: false, gasFree: false });
             const [gas, setGas] = useState({ o2: '', lel: '' });
 
-            // Persistence Effects
             useEffect(() => { localStorage.setItem('ntg_academy_ok', academyCleared); }, [academyCleared]);
             useEffect(() => { localStorage.setItem('ntg_completed_today', JSON.stringify(completedVessels)); }, [completedVessels]);
 
             const isLNG = activeVessel?.type === 'LNG_CONV';
             const canSign = photos.length >= 2 && tasks.length > 0 && checks.fire && checks.gasFree && (!isLNG || (gas.o2 && gas.lel));
 
+            // [V2.5.4] PDF EXPORT LOGIC
+            const generatePDF = () => {
+                const logs = JSON.parse(localStorage.getItem('ntg_M2_logs') || '[]');
+                if (logs.length === 0) return alert("NO LOGS FOUND FOR EXPORT");
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                doc.setFontSize(18); doc.text("NAUTICAL TECHNOLOGY - SAFETY REPORT", 10, 20);
+                doc.setFontSize(10); doc.text("OFFICIAL FORENSIC LOGS (V2.5.4)", 10, 30);
+                doc.line(10, 35, 200, 35);
+
+                let y = 45;
+                logs.forEach((log, index) => {
+                    doc.setFontSize(12); doc.text(`${index + 1}. ${log.vessel} - ${log.ts}`, 10, y);
+                    doc.setFontSize(10); doc.text(`Tasks: ${log.tasks.join(', ')}`, 15, y + 7);
+                    if (log.gas !== 'N/A') doc.text(`Gas: O2:${log.gas.o2}% | LEL:${log.gas.lel}%`, 15, y + 14);
+                    y += 25;
+                });
+
+                doc.save(`NT_Safety_Report_${new Date().toLocaleDateString()}.pdf`);
+            };
+
             const handleSignLog = () => {
                 if (!canSign) return;
                 const logEntry = {
-                    ts: new Date().toLocaleString('el-GR'),
-                    vessel: activeVessel.name,
-                    tasks: tasks.map(t => t.job),
-                    gas: isLNG ? gas : 'N/A'
+                    ts: new Date().toLocaleString('el-GR'), vessel: activeVessel.name, tasks: tasks.map(t => t.job), gas: isLNG ? gas : 'N/A'
                 };
                 const logs = JSON.parse(localStorage.getItem('ntg_M2_logs') || '[]');
                 logs.push(logEntry);
                 localStorage.setItem('ntg_M2_logs', JSON.stringify(logs));
-
                 setCompletedVessels(prev => ({...prev, [activeVessel.id]: true}));
                 setView('WATCHLIST');
-                alert("SHIFT SECURED IN BLACK BOX");
             };
 
             if (view === 'WATCHLIST') return (
                 <div className="min-h-screen p-6">
-                    <header className="glass p-6 rounded-[2rem] border-l-4 border-blue-500 mb-10 flex justify-between items-center">
-                        <div><h1 className="text-sm font-black uppercase text-blue-500">Safety Officer</h1><p className="text-[7px] opacity-40 uppercase font-black tracking-widest">by NT | V2.5.3</p></div>
-                        <button onClick={() => setView('ACADEMY')} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase ${academyCleared ? 'text-emerald-500' : 'text-red-500 animate-pulse'}`}>
-                            {academyCleared ? 'Clearance OK' : 'Academy Lock'}
-                        </button>
+                    <header className="glass p-6 rounded-[2rem] border-l-4 border-blue-500 mb-10">
+                        <div className="flex justify-between items-center">
+                            <div><h1 className="text-sm font-black uppercase text-blue-500">Safety Officer</h1><p className="text-[7px] opacity-40 uppercase font-black">by NT | V2.5.4 FINAL</p></div>
+                            <button onClick={() => setView('ACADEMY')} className={`px-4 py-2 rounded-xl text-[8px] font-black uppercase ${academyCleared ? 'text-emerald-500' : 'text-red-500 animate-pulse'}`}>{academyCleared ? 'Clearance OK' : 'Academy Lock'}</button>
+                        </div>
+                        <button onClick={generatePDF} className="w-full mt-4 bg-blue-600/20 border border-blue-500/50 text-blue-400 h-10 rounded-xl text-[8px] font-black uppercase tracking-widest italic"><i className="fa-solid fa-file-pdf mr-2"></i>Generate Official Booklet</button>
                     </header>
 
                     <div className="space-y-4">
                         {SEPE_SCHEDULE.map(v => (
-                            <div key={v.id} onClick={() => { if(!academyCleared && v.type === 'LNG_CONV') return; setActiveVessel(v); setView('INSPECTION'); setPhotos([]); setTasks([]); setChecks({fire:false, gasFree:false}); setGas({o2:'', lel:''}); }} 
-                                 className={`glass p-6 rounded-[2.5rem] flex justify-between items-center border-l-4 transition-all ${v.type === 'LNG_CONV' && !academyCleared ? 'opacity-30 border-red-900' : 'border-blue-600 active:scale-95 cursor-pointer'}`}>
+                            <div key={v.id} onClick={() => { if(!academyCleared && v.type === 'LNG_CONV') return; setActiveVessel(v); setView('INSPECTION'); setPhotos([]); setTasks([]); setChecks({fire:false, gasFree:false}); setGas({o2:'', lel:''}); }} className={`glass p-6 rounded-[2.5rem] flex justify-between items-center border-l-4 transition-all ${v.type === 'LNG_CONV' && !academyCleared ? 'opacity-30 border-red-900' : 'border-blue-600 active:scale-95 cursor-pointer'}`}>
                                 <div><p className="text-xs font-black uppercase italic">{v.name}</p><p className="text-[8px] opacity-40 uppercase font-black mt-1">{v.shift}</p></div>
                                 {completedVessels[v.id] ? <i className="fa-solid fa-check-circle text-emerald-500 text-xl"></i> : <i className="fa-solid fa-chevron-right opacity-20"></i>}
                             </div>
@@ -94,11 +109,7 @@
                 <div className="min-h-screen p-8 flex flex-col justify-center space-y-6">
                     <div className="glass p-8 rounded-[3rem] space-y-6 border-l-4 border-blue-500 text-[10px] uppercase font-black">
                         <h2 className="text-xl italic text-blue-500">Knowledge Gate</h2>
-                        <div className="bg-black/20 p-4 rounded-2xl space-y-2 opacity-70">
-                            <p>1. ISGOTT: O2 20.9% / LEL 0%</p>
-                            <p>2. P.D. 70/90: Mandatory Watch</p>
-                            <p>3. EVIDENCE: Min 2 Photos</p>
-                        </div>
+                        <div className="bg-black/20 p-4 rounded-2xl space-y-2 opacity-70"><p>1. ISGOTT: O2 20.9% / LEL 0%</p><p>2. P.D. 70/90: Mandatory Watch</p><p>3. EVIDENCE: Min 2 Photos</p></div>
                         <button onClick={() => {setAcademyCleared(true); setView('WATCHLIST');}} className="fat-finger w-full bg-blue-600 text-white">Unlock Operations</button>
                     </div>
                 </div>
@@ -108,36 +119,29 @@
                 <div className="min-h-screen p-6 pb-64">
                     <div className="glass p-8 rounded-[3rem] text-center mb-8 border-l-4 border-emerald-500">
                         <h2 className="text-2xl font-black uppercase italic">{activeVessel.name}</h2>
-                        <p className="text-[8px] text-emerald-500 font-black uppercase mt-1 tracking-widest italic">Compliance Mode Active</p>
+                        <p className="text-[8px] text-emerald-500 font-black uppercase mt-1 tracking-widest italic tracking-widest">Compliance Mode Active</p>
                     </div>
 
                     <div className="space-y-6">
                         <div className="glass p-6 rounded-[2rem] space-y-4">
-                            <div className="grid grid-cols-2 gap-3">
-                                <select onChange={(e) => setSelectedArea(e.target.value)}><option>Main Deck</option><option>Engine Room</option></select>
-                                <select onChange={(e) => setSelectedJob(e.target.value)}><option>Hot Works</option><option>Confined Space</option></select>
-                            </div>
-                            <button onClick={() => setTasks([...tasks, {id:Date.now(), area:selectedArea, job:selectedJob}])} className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 h-12 rounded-xl font-black uppercase text-[10px] italic">Add Task +</button>
-                            <div className="space-y-2">
-                                {tasks.map(t => <div key={t.id} className="bg-slate-900/50 p-4 rounded-xl text-[9px] font-black uppercase flex justify-between border-l-2 border-emerald-500"><span>{t.area}</span><span className="text-emerald-500">{t.job}</span></div>)}
-                            </div>
+                            <button onClick={() => setTasks([...tasks, {id:Date.now(), job:'Hot Works'}])} className="w-full bg-blue-600/20 border border-blue-600/50 text-blue-400 h-12 rounded-xl font-black uppercase text-[10px] italic">Add Task +</button>
+                            {tasks.map(t => <div key={t.id} className="bg-slate-900/50 p-4 rounded-xl text-[9px] font-black uppercase flex justify-between border-l-2 border-emerald-500"><span>Main Deck</span><span className="text-emerald-500">{t.job}</span></div>)}
                         </div>
-
                         {tasks.length > 0 && (
                             <div className="glass p-6 rounded-[2.5rem] space-y-5 border-l-4 border-orange-500">
-                                <label className="flex items-center gap-4"><input type="checkbox" checked={checks.fire} onChange={(e)=>setChecks({...checks, fire: e.target.checked})} className="w-6 h-6 accent-orange-500" /><span className="text-[10px] font-black uppercase">Fire Watch</span></label>
-                                <label className="flex items-center gap-4"><input type="checkbox" checked={checks.gasFree} onChange={(e)=>setChecks({...checks, gasFree: e.target.checked})} className="w-6 h-6 accent-orange-500" /><span className="text-[10px] font-black uppercase">Gas-Free</span></label>
+                                <label className="flex items-center gap-4"><input type="checkbox" onChange={(e)=>setChecks({...checks, fire: e.target.checked})} className="w-6 h-6 accent-orange-500" /><span className="text-[10px] font-black uppercase">Fire Watch</span></label>
+                                <label className="flex items-center gap-4"><input type="checkbox" onChange={(e)=>setChecks({...checks, gasFree: e.target.checked})} className="w-6 h-6 accent-orange-500" /><span className="text-[10px] font-black uppercase">Gas-Free</span></label>
                                 {isLNG && <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/5"><input type="number" placeholder="O2 %" value={gas.o2} onChange={(e)=>setGas({...gas, o2: e.target.value})} className="bg-black/40 p-4 rounded-xl text-center text-xs outline-none text-white" /><input type="number" placeholder="LEL %" value={gas.lel} onChange={(e)=>setGas({...gas, lel: e.target.value})} className="bg-black/40 p-4 rounded-xl text-center text-xs outline-none text-white" /></div>}
                             </div>
                         )}
                     </div>
 
-                    <div className="fixed bottom-6 left-6 right-6 space-y-3 glass p-4 rounded-[2.5rem] border-t border-white/10 z-50">
-                        <button onClick={() => setPhotos([...photos, Date.now()])} className="fat-finger w-full bg-slate-800 text-white border border-slate-700">Capture Evidence ({photos.length}/2)</button>
-                        <button disabled={!canSign} onClick={handleSignLog} className={`fat-finger w-full ${canSign ? 'bg-emerald-600 text-white matrix-blink' : 'bg-slate-900 text-slate-600 opacity-50'}`}>Sign Daily Log</button>
+                    <div className="fixed bottom-6 left-6 right-6 space-y-3 glass p-4 rounded-[2.5rem]">
+                        <button onClick={() => setPhotos([...photos, Date.now()])} className="fat-finger w-full bg-slate-800 text-white">Capture Evidence ({photos.length}/2)</button>
+                        <button disabled={!canSign} onClick={handleSignLog} className={`fat-finger w-full ${canSign ? 'bg-emerald-600 text-white matrix-blink' : 'bg-slate-900 opacity-50'}`}>Sign Daily Log</button>
                     </div>
                 </div>
             );
         };
-        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV253 />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV254 />);
     </script></body></html>
