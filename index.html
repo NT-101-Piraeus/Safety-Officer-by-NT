@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="el">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no text-align: center">
-    <title>Safety Officer | V2.7.0 Dashboard</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Safety Officer | V2.7.1 Advisor</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -22,22 +22,30 @@
         const { useState, useEffect } = React;
 
         const MASTER_PASSCODE = "2026";
+        
+        // --- ADVISORY DATA ---
+        const SAFETY_TIPS = {
+            "Scaffolding": "ADVICE: Check base plates, green tags, and harness points. Ensure wind speed < 20kts.",
+            "Enclosed Space Entry": "ADVICE: Continuous ventilation required. LEL < 1%, O2 > 20.9%. Standby person at entrance.",
+            "Hot Works": "ADVICE: Fire blanket in place. Fire watch present for 30 mins after work finishes.",
+            "Lifting Ops": "ADVICE: Check SWL of slings. No personnel under suspended loads. Communication via radio.",
+            "Grinding": "ADVICE: Eye protection & face shield mandatory. Check for sparks landing on flammable materials."
+        };
+
         const WORK_AREAS = {
             "Main Deck": ["Hot Works", "Painting", "Scaffolding", "Lifting Ops", "Grinding"],
-            "Double Bottoms (DB)": ["Enclosed Space Entry", "Tank Cleaning", "In-situ Inspection", "Welding"],
-            "Engine Room": ["Maintenance", "Electrical Works", "Pipe Fitting", "Insulation"],
-            "Pump Room": ["Gas Sampling", "Valve Overhaul", "Bilge Check"],
-            "Accommodation": ["Hot Works", "AC Maintenance", "Fire System Test"]
+            "Double Bottoms (DB)": ["Enclosed Space Entry", "Tank Cleaning", "Welding"],
+            "Engine Room": ["Maintenance", "Electrical Works", "Insulation"],
+            "Pump Room": ["Gas Sampling", "Valve Overhaul"]
         };
 
         const SEPE_SCHEDULE = [
             { id: 'ALX01', name: 'MT FELIX', type: 'LNG_CONV', shift: '07:00-11:00' },
             { id: 'ALX02', name: 'BADJI MOKHTAR III', type: 'LNG_CONV', shift: '11:00-13:00' },
-            { id: 'ALX03', name: 'ΑΡΙΑΔΝΗ', type: 'STANDARD', shift: '13:00-15:00' },
-            { id: 'ALX04', name: 'RIGEL III', type: 'STANDARD', shift: '15:00-17:00' }
+            { id: 'ALX03', name: 'ΑΡΙΑΔΝΗ', type: 'STANDARD', shift: '13:00-15:00' }
         ];
 
-        const SafetyOfficerV270 = () => {
+        const SafetyOfficerV271 = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [view, setView] = useState('WATCHLIST');
             const [completedVessels, setCompletedVessels] = useState(() => JSON.parse(localStorage.getItem('ntg_completed_today') || '{}'));
@@ -47,19 +55,15 @@
             const [selectedArea, setSelectedArea] = useState("");
             const [selectedTasks, setSelectedTasks] = useState([]);
             const [remarks, setRemarks] = useState("");
-            const [photos, setPhotos] = useState([]);
+            const [photoCount, setPhotoCount] = useState(0);
 
             useEffect(() => { localStorage.setItem('ntg_completed_today', JSON.stringify(completedVessels)); }, [completedVessels]);
             useEffect(() => { localStorage.setItem('ntg_M2_logs', JSON.stringify(logs)); }, [logs]);
 
             const handleSign = () => {
                 const newLog = { 
-                    id: Date.now(),
-                    vessel: activeVessel.name, 
-                    ts: new Date().toLocaleString('el-GR'), 
-                    area: selectedArea, 
-                    tasks: selectedTasks, 
-                    remarks: remarks 
+                    id: Date.now(), vessel: activeVessel.name, ts: new Date().toLocaleString('el-GR'), 
+                    area: selectedArea, tasks: selectedTasks, remarks, photos: photoCount 
                 };
                 setLogs([newLog, ...logs]);
                 setCompletedVessels({...completedVessels, [activeVessel.id]: true});
@@ -68,8 +72,8 @@
 
             if (!isAuthenticated) return (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 text-center">
-                    <div className="glass p-10 rounded-[3rem] w-full max-w-sm border-t-4 border-blue-500">
-                        <h2 className="text-xl font-black mb-6 italic">NT SECURE LOGIN</h2>
+                    <div className="glass p-10 rounded-[3rem] w-full max-w-sm border-t-4 border-blue-500 font-black italic">
+                        <h2 className="text-xl mb-6 uppercase">Secure Access</h2>
                         <input type="password" onChange={(e) => e.target.value === MASTER_PASSCODE && setIsAuthenticated(true)} 
                                className="w-full bg-black/40 p-5 rounded-xl text-center text-2xl tracking-[0.5em] outline-none border border-white/10" placeholder="****" />
                     </div>
@@ -79,16 +83,11 @@
             if (view === 'WATCHLIST') return (
                 <div className="p-6">
                     <header className="glass p-6 rounded-[2rem] border-l-4 border-blue-500 mb-8">
-                        <div className="flex justify-between items-center mb-4">
-                            <h1 className="text-sm font-black text-blue-500 italic uppercase">Safety Radar</h1>
-                            <span className="text-[9px] opacity-40 font-black">V2.7.0</span>
-                        </div>
-                        <button onClick={() => setView('DASHBOARD')} className="w-full bg-blue-600/20 border border-blue-500/50 text-blue-400 h-12 rounded-xl text-[10px] font-black uppercase italic tracking-widest"><i className="fa-solid fa-chart-line mr-2"></i>View Shift Log (History)</button>
+                        <button onClick={() => setView('DASHBOARD')} className="w-full bg-blue-600/20 border border-blue-500/50 text-blue-400 h-12 rounded-xl text-[10px] font-black uppercase italic tracking-widest"><i className="fa-solid fa-book mr-2"></i>Research History / Diary</button>
                     </header>
-
                     <div className="space-y-4">
                         {SEPE_SCHEDULE.map(v => (
-                            <div key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); setSelectedArea(""); setSelectedTasks([]); setRemarks(""); setPhotos([]); }} 
+                            <div key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); setSelectedArea(""); setSelectedTasks([]); setRemarks(""); setPhotoCount(0); }} 
                                  className="glass p-6 rounded-[2.5rem] flex justify-between items-center border-l-4 border-blue-600 active:scale-95 transition-all">
                                 <div><p className="text-xs font-black uppercase italic">{v.name}</p><p className="text-[8px] opacity-40 uppercase font-black">{v.shift}</p></div>
                                 {completedVessels[v.id] && <i className="fa-solid fa-check-circle text-emerald-500 text-xl"></i>}
@@ -100,21 +99,16 @@
 
             if (view === 'DASHBOARD') return (
                 <div className="p-6 pb-20">
-                    <button onClick={() => setView('WATCHLIST')} className="text-[10px] font-black text-blue-500 mb-6 uppercase tracking-widest">← Back to Radar</button>
-                    <h2 className="text-lg font-black italic mb-6 text-blue-500 uppercase">Daily Diary Logs</h2>
+                    <button onClick={() => setView('WATCHLIST')} className="text-[10px] font-black text-blue-500 mb-6 uppercase italic">← Return</button>
+                    <h2 className="text-lg font-black italic mb-6 text-blue-500 uppercase">Forensic Research Log</h2>
                     <div className="space-y-4">
-                        {logs.length === 0 ? <p className="text-[10px] opacity-30 italic text-center py-10 uppercase font-black">No logs recorded yet today.</p> : 
-                        logs.map(log => (
+                        {logs.map(log => (
                             <div key={log.id} className="glass p-6 rounded-[2rem] border-l-2 border-white/20">
-                                <div className="flex justify-between items-start mb-4">
-                                    <p className="text-[11px] font-black italic uppercase text-blue-400">{log.vessel}</p>
-                                    <p className="text-[8px] opacity-30">{log.ts}</p>
-                                </div>
-                                <div className="space-y-2">
-                                    <p className="text-[9px] font-bold text-emerald-500 uppercase">Area: {log.area}</p>
-                                    <p className="text-[9px] font-bold opacity-80 uppercase">Tasks: {log.tasks.join(", ")}</p>
-                                    {log.remarks && <p className="text-[9px] bg-black/30 p-3 rounded-lg italic">Obs: {log.remarks}</p>}
-                                </div>
+                                <p className="text-[11px] font-black uppercase text-blue-400 mb-2">{log.vessel} ({log.ts})</p>
+                                <p className="text-[9px] font-bold uppercase text-emerald-500">Area: {log.area}</p>
+                                <p className="text-[9px] opacity-70 uppercase">Tasks: {log.tasks.join(", ")}</p>
+                                <p className="text-[9px] mt-2 bg-black/40 p-3 rounded italic">Notes: {log.remarks}</p>
+                                <p className="text-[7px] mt-2 opacity-30 uppercase font-black">Evidences captured: {log.photos}</p>
                             </div>
                         ))}
                     </div>
@@ -123,43 +117,57 @@
 
             return (
                 <div className="p-6 pb-64">
-                    <button onClick={() => setView('WATCHLIST')} className="text-[9px] font-black text-blue-500 mb-6 uppercase tracking-widest italic">← Cancel Inspection</button>
+                    <button onClick={() => setView('WATCHLIST')} className="text-[9px] font-black text-blue-500 mb-6 uppercase tracking-widest italic">← Back</button>
                     <div className="glass p-6 rounded-[2rem] border-l-4 border-emerald-500 mb-6 text-center">
-                        <h2 className="text-xl font-black uppercase italic tracking-tighter">{activeVessel.name}</h2>
+                        <h2 className="text-xl font-black uppercase italic">{activeVessel.name}</h2>
                     </div>
 
                     <div className="space-y-6">
                         <div className="glass p-6 rounded-[2rem] space-y-4">
-                            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Location Selector</p>
                             <select onChange={(e) => {setSelectedArea(e.target.value); setSelectedTasks([]);}}>
                                 <option value="">Select Area...</option>
                                 {Object.keys(WORK_AREAS).map(a => <option key={a} value={a}>{a}</option>)}
                             </select>
                             
                             {selectedArea && (
-                                <div className="grid grid-cols-1 gap-2 pt-2 text-[10px] font-black">
+                                <div className="space-y-2">
                                     {WORK_AREAS[selectedArea].map(task => (
-                                        <label key={task} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl active:bg-blue-900/20">
-                                            <input type="checkbox" onChange={(e) => e.target.checked ? setSelectedTasks([...selectedTasks, task]) : setSelectedTasks(selectedTasks.filter(t => t !== task))} className="w-5 h-5 accent-emerald-500" />
-                                            <span className="uppercase">{task}</span>
-                                        </label>
+                                        <div key={task} className="space-y-2">
+                                            <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl">
+                                                <input type="checkbox" onChange={(e) => {
+                                                    const newTasks = e.target.checked ? [...selectedTasks, task] : selectedTasks.filter(t => t !== task);
+                                                    setSelectedTasks(newTasks);
+                                                }} className="w-5 h-5 accent-emerald-500" />
+                                                <span className="text-[10px] font-black uppercase">{task}</span>
+                                            </label>
+                                            {selectedTasks.includes(task) && SAFETY_TIPS[task] && (
+                                                <div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-[9px] text-blue-400 font-black italic">
+                                                    <i className="fa-solid fa-shield-halved mr-2"></i>{SAFETY_TIPS[task]}
+                                                </div>
+                                            )}
+                                        </div>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        <div className="glass p-6 rounded-[2rem] space-y-4">
-                            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Safety Observations</p>
-                            <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Type remarks here..." className="w-full bg-black/20 p-4 rounded-xl text-[10px] h-32 outline-none border border-white/5 font-bold" />
+                        <div className="glass p-6 rounded-[2rem] space-y-2">
+                            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest">Inspection Notes</p>
+                            <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Type findings and corrections..." className="w-full bg-black/20 p-4 rounded-xl text-[10px] h-32 outline-none border border-white/5 font-black" />
                         </div>
                     </div>
 
                     <div className="fixed bottom-6 left-6 right-6 space-y-3 glass p-4 rounded-[2rem] border-t border-white/10">
-                        <button onClick={() => setPhotos([...photos, Date.now()])} className="fat-finger bg-slate-800 text-[10px]">Capture Evidence ({photos.length}/2)</button>
-                        <button disabled={photos.length < 2 || selectedTasks.length === 0} onClick={handleSign} className={`fat-finger ${photos.length >= 2 && selectedTasks.length > 0 ? 'bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-slate-900 opacity-40 text-slate-500'} text-[10px]`}>Sign Shift Report</button>
+                        <div className="relative">
+                            <input type="file" accept="image/*" capture="camera" onChange={() => setPhotoCount(prev => prev + 1)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                            <button className="fat-finger bg-slate-800 text-[10px] pointer-events-none">
+                                <i className="fa-solid fa-camera mr-2"></i>Capture Photo ({photoCount}/2)
+                            </button>
+                        </div>
+                        <button disabled={photoCount < 2 || selectedTasks.length === 0} onClick={handleSign} className={`fat-finger ${photoCount >= 2 && selectedTasks.length > 0 ? 'bg-emerald-600' : 'bg-slate-900 opacity-40 text-slate-500'} text-[10px]`}>Sign Shift</button>
                     </div>
                 </div>
             );
         };
-        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV270 />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV271 />);
     </script></body></html>
