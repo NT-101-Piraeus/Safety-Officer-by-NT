@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Safety Officer | V2.9.0 Academy Edition</title>
+    <title>NT Safety Commander | V3.0.0</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -12,9 +12,11 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
         body { background: #020617; color: white; font-family: 'Orbitron', sans-serif; font-style: italic; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .fitness-active { background: #10b981; box-shadow: 0 0 10px #10b981; }
-        .fat-finger { height: 65px; border-radius: 1.2rem; font-weight: 900; text-transform: uppercase; transition: 0.2s; }
-        input[type="number"] { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 0.8rem; }
+        .card-blue { border-left: 4px solid #3b82f6; }
+        .card-emerald { border-left: 4px solid #10b981; }
+        .card-amber { border-left: 4px solid #f59e0b; }
+        .fat-finger { height: 60px; border-radius: 1rem; font-weight: 900; text-transform: uppercase; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+        input, select, textarea { background: rgba(30, 41, 59, 0.5) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: white !important; padding: 12px; border-radius: 0.8rem; outline: none; width: 100%; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -24,132 +26,170 @@
 
         const MASTER_PASSCODE = "2026";
         
-        // --- ACADEMY KNOWLEDGE BASE ---
-        const ACADEMY_CHAPTERS = [
-            {
-                id: 'CH1', title: 'Θερμές Εργασίες (Αμπάρια/Σωλήνες)', 
-                content: '1. Έκδοση Πιστοποιητικού Χημικού Ναυτιλίας.\n2. Τάπωμα δικτύων & απομόνωση (LOTO).\n3. Συνεχής εξαερισμός & μέτρηση LEL/O2.\n4. Πυροπροστασία με κουβέρτες & Fire Watch.'
-            },
-            {
-                id: 'CH2', title: 'Αποσυναρμολόγηση Στροφάλου', 
-                content: '1. Έλεγχος SWL ανυψωτικών μέσων (παλάγκα).\n2. Σωστή στήριξη (blocking) της μηχανής.\n3. Χρήση ΜΑΠ (κράνος, γάντια βαρέως τύπου).\n4. Συντονισμός κινήσεων - Safe Zones.'
-            },
-            {
-                id: 'CH3', title: 'Επισκευή Καταπέλτη (Ramp)', 
-                content: '1. Ασφάλιση καταπέλτη με μηχανικά μέσα (chains/pins).\n2. Έλεγχος υδραυλικών πιέσεων (Zero Energy).\n3. Αποκλεισμός περιοχής από κάτω.\n4. Εργασία σε ύψος - Χρήση Harness.'
-            }
+        // --- DATASET: Π.Δ. 70/90 DAILY TIPS ---
+        const LAW_TIPS = [
+            { art: "Άρθρο 15", tip: "Ο καθαρισμός από εύφλεκτα υλικά πρέπει να είναι συνεχής κατά τη διάρκεια των εργασιών." },
+            { art: "Άρθρο 17", tip: "Στις θερμές εργασίες, η ύπαρξη πυροφύλακα είναι υποχρεωτική για 30' μετά τη λήξη." },
+            { art: "Άρθρο 45", tip: "Οι σκαλωσιές πρέπει να φέρουν σήμανση (Green Tag) και θωράκια (σοβατεπί) στο δάπεδο." },
+            { art: "Άρθρο 52", tip: "Η χρήση ζώνης ασφαλείας είναι υποχρεωτική σε ύψη άνω των 2 μέτρων χωρίς προστασία." }
         ];
 
-        const SEPE_SCHEDULE = [
-            { id: 'SAL01', name: 'SALAMIS SHIPREPAIR', loc: 'Τεύκρου 48' },
-            { id: 'ALX01', name: 'MT FELIX', loc: 'FSRU ALX' }
+        const ACADEMY_DATA = [
+            { id: 1, title: "Hot Works (Tanks)", info: "Gas-free cert, LOTO on lines, continuous vent." },
+            { id: 2, title: "Crankshaft Overhaul", info: "SWL check on chain blocks, secure engine blocking." },
+            { id: 3, title: "Ramp Repair", info: "Mechanical locks (pins), hydraulic zero-pressure." }
         ];
 
-        const SafetyOfficerV290 = () => {
+        const SEPE_DATA = [
+            { id: 'SAL01', name: 'SALAMIS SHIPREPAIR', port: 'Σαλαμίνα', time: '07:00-11:00' },
+            { id: 'ALX01', name: 'MT FELIX', port: 'Αλεξανδρούπολη', time: '11:00-15:00' }
+        ];
+
+        const App = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
-            const [view, setView] = useState('RADAR');
-            const [completedToday, setCompletedToday] = useState(() => JSON.parse(localStorage.getItem('ntg_done_today') || '[]'));
+            const [view, setView] = useState('MAIN');
             const [activeVessel, setActiveVessel] = useState(null);
+            const [logs, setLogs] = useState(() => JSON.parse(localStorage.getItem('ntg_M2_logs') || '[]'));
+            const [dailyTip] = useState(LAW_TIPS[new Date().getDate() % LAW_TIPS.length]);
+
+            useEffect(() => { localStorage.setItem('ntg_M2_logs', JSON.stringify(logs)); }, [logs]);
 
             if (!isAuthenticated) return (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
                     <div className="glass p-10 rounded-[3rem] w-full max-w-sm text-center border-t-4 border-blue-500">
-                        <h2 className="text-xl font-black mb-6 italic tracking-widest">NT SECURE</h2>
+                        <h2 className="text-xl font-black mb-6 italic tracking-widest uppercase">NT Secure Gate</h2>
                         <input type="password" onChange={(e) => e.target.value === MASTER_PASSCODE && setIsAuthenticated(true)} 
-                               className="w-full bg-black/40 p-5 rounded-xl text-center text-2xl tracking-[0.5em] outline-none border border-white/10" placeholder="****" />
+                               className="text-center text-2xl tracking-[0.5em]" placeholder="****" />
                     </div>
                 </div>
             );
 
-            if (view === 'RADAR') return (
-                <div className="p-6">
-                    <header className="glass p-6 rounded-[2.5rem] mb-6 flex justify-between items-center border-b border-blue-500/20">
-                        <div><h1 className="text-xs font-black text-blue-500 uppercase">Fitness Radar</h1><p className="text-[10px] opacity-40 uppercase">V2.9.0 Operations</p></div>
-                        <div className="flex gap-2">
-                            {[0,1,2,3,4,5,6].map(d => <div key={d} className={`w-2 h-2 rounded-full ${d === new Date().getDay() ? 'fitness-active' : 'bg-white/10'}`}></div>)}
+            // --- VIEW: MAIN DASHBOARD ---
+            if (view === 'MAIN') return (
+                <div className="p-6 pb-20">
+                    {/* Top Duty Calendar Bar */}
+                    <div className="glass p-5 rounded-[2rem] card-blue mb-6">
+                        <div className="flex justify-between items-center mb-3">
+                            <p className="text-[9px] font-black uppercase text-blue-400"><i className="fa-solid fa-calendar-day mr-2"></i> Today's Duty Radar</p>
+                            <span className="text-[8px] opacity-40">{new Date().toLocaleDateString()}</span>
                         </div>
-                    </header>
-
-                    <button onClick={() => setView('ACADEMY')} className="w-full glass p-5 rounded-[2rem] mb-8 border-l-4 border-emerald-500 flex justify-between items-center active:scale-95 transition-all">
-                        <span className="text-[11px] font-black uppercase italic tracking-widest"><i className="fa-solid fa-graduation-cap mr-3"></i> Safety Academy</span>
-                        <i className="fa-solid fa-chevron-right opacity-30"></i>
-                    </button>
-
-                    <div className="space-y-4">
-                        <p className="text-[9px] opacity-30 font-black uppercase ml-2 tracking-widest">Daily Checklist</p>
-                        {SEPE_SCHEDULE.map(v => (
-                            <div key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); }} 
-                                 className={`glass p-6 rounded-[2rem] border-l-4 ${completedToday.includes(v.id) ? 'border-emerald-500 opacity-40' : 'border-blue-600'} flex justify-between items-center`}>
-                                <div><p className="text-xs font-black uppercase italic">{v.name}</p><p className="text-[8px] opacity-40 uppercase">{v.loc}</p></div>
-                                {completedToday.includes(v.id) && <i className="fa-solid fa-check text-emerald-500"></i>}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-            if (view === 'ACADEMY') return (
-                <div className="p-6">
-                    <button onClick={() => setView('RADAR')} className="text-[10px] font-black text-blue-500 mb-8 uppercase italic">← Return</button>
-                    <h2 className="text-xl font-black italic text-emerald-500 mb-6 uppercase tracking-tighter">Safety Academy</h2>
-                    <div className="space-y-4">
-                        {ACADEMY_CHAPTERS.map(ch => (
-                            <div key={ch.id} className="glass p-6 rounded-[2rem] border-l-2 border-emerald-500/30">
-                                <h3 className="text-xs font-black uppercase mb-3 text-emerald-400">{ch.title}</h3>
-                                <p className="text-[10px] leading-relaxed opacity-70 whitespace-pre-line">{ch.content}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
-
-            return <VesselInspection vessel={activeVessel} onSign={() => { 
-                setCompletedToday([...completedToday, activeVessel.id]); 
-                localStorage.setItem('ntg_done_today', JSON.stringify([...completedToday, activeVessel.id]));
-                setView('RADAR'); 
-            }} onBack={() => setView('RADAR')} />;
-        };
-
-        const VesselInspection = ({ vessel, onSign, onBack }) => {
-            const [pob, setPob] = useState({ crew: 0, techn: 0 });
-            const [tasks, setTasks] = useState([]);
-
-            return (
-                <div className="p-6 pb-40">
-                    <button onClick={onBack} className="text-[10px] font-black text-blue-500 mb-8 uppercase italic">← Back</button>
-                    <div className="glass p-6 rounded-[2.5rem] mb-6 border-b-4 border-emerald-500 text-center uppercase italic">
-                        <h2 className="text-xl font-black">{vessel.name}</h2>
-                    </div>
-
-                    <div className="glass p-6 rounded-[2rem] mb-6 space-y-4">
-                        <p className="text-[9px] font-black text-red-500 uppercase"><i className="fa-solid fa-users-gear mr-2"></i> POB Counter (Emergency)</p>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div><p className="text-[7px] opacity-40 uppercase mb-1">Crew</p><input type="number" onChange={e => setPob({...pob, crew: e.target.value})} className="w-full text-center font-black" placeholder="0" /></div>
-                            <div><p className="text-[7px] opacity-40 uppercase mb-1">Contractors</p><input type="number" onChange={e => setPob({...pob, techn: e.target.value})} className="w-full text-center font-black" placeholder="0" /></div>
-                        </div>
-                        <p className="text-center text-lg font-black text-red-500">{Number(pob.crew) + Number(pob.techn)} Total</p>
-                    </div>
-
-                    <div className="glass p-6 rounded-[2rem] mb-6">
-                        <p className="text-[9px] font-black opacity-30 uppercase mb-4">Inspection Checklist</p>
                         <div className="space-y-2">
-                            {["Hot Works", "Lifting", "Scaffolding", "Painting"].map(t => (
-                                <label key={t} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl text-[10px] font-black uppercase italic">
-                                    <input type="checkbox" onChange={e => e.target.checked ? setTasks([...tasks, t]) : setTasks(tasks.filter(x => x !== t))} className="w-5 h-5 accent-emerald-500" />
-                                    {t}
-                                </label>
+                            {SEPE_DATA.map(s => (
+                                <div key={s.id} className="flex justify-between text-[10px] font-black uppercase italic">
+                                    <span className="opacity-70">{s.name}</span>
+                                    <span className="text-blue-400">{s.port} | {s.time}</span>
+                                </div>
                             ))}
                         </div>
                     </div>
 
+                    {/* Daily Law Widget */}
+                    <div className="glass p-5 rounded-[2rem] card-amber mb-8 bg-amber-500/5">
+                        <div className="flex items-center gap-3 mb-2">
+                            <i className="fa-solid fa-gavel text-amber-500"></i>
+                            <p className="text-[10px] font-black uppercase text-amber-500 tracking-tighter">Π.Δ. 70/90 Daily Advisor</p>
+                        </div>
+                        <p className="text-[10px] font-bold opacity-80 leading-relaxed italic">"{dailyTip.tip}" <span className="text-amber-500 ml-1">({dailyTip.art})</span></p>
+                    </div>
+
+                    {/* Navigation Divisions */}
+                    <div className="grid grid-cols-1 gap-4">
+                        <button onClick={() => setView('INSPECTION_LIST')} className="fat-finger bg-blue-600 shadow-lg shadow-blue-900/20"><i className="fa-solid fa-clipboard-check"></i> Field Inspections</button>
+                        <button onClick={() => setView('ACADEMY')} className="fat-finger bg-emerald-600 shadow-lg shadow-emerald-900/20"><i className="fa-solid fa-graduation-cap"></i> Safety Academy</button>
+                        <button onClick={() => setView('STUDY')} className="fat-finger bg-sky-700 shadow-lg shadow-sky-900/20"><i className="fa-solid fa-microscope"></i> Study Research</button>
+                        <button onClick={() => alert("Central Vault Sync: Active")} className="fat-finger bg-slate-800 border border-white/10 text-[9px] opacity-50"><i className="fa-solid fa-database"></i> Database Vault Sync</button>
+                    </div>
+                </div>
+            );
+
+            // --- VIEW: ACADEMY ---
+            if (view === 'ACADEMY') return (
+                <div className="p-6">
+                    <button onClick={() => setView('MAIN')} className="text-[10px] font-black text-blue-500 mb-6 uppercase">← Back</button>
+                    <h2 className="text-xl font-black italic mb-6 text-emerald-500 uppercase tracking-tighter">Safety Academy</h2>
+                    <div className="space-y-4">
+                        {ACADEMY_DATA.map(a => (
+                            <div key={a.id} className="glass p-6 rounded-[2rem] card-emerald">
+                                <h3 className="text-xs font-black uppercase mb-2 text-emerald-400">{a.title}</h3>
+                                <p className="text-[10px] leading-relaxed opacity-70 italic">{a.info}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            // --- VIEW: INSPECTION SELECTION ---
+            if (view === 'INSPECTION_LIST') return (
+                <div className="p-6">
+                    <button onClick={() => setView('MAIN')} className="text-[10px] font-black text-blue-500 mb-6 uppercase">← Back</button>
+                    <h2 className="text-xl font-black italic mb-6 uppercase tracking-tighter">Select Vessel</h2>
+                    <div className="space-y-4">
+                        {SEPE_DATA.map(v => (
+                            <button key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECT_FORM'); }} className="glass w-full p-6 rounded-[2rem] text-left card-blue font-black uppercase italic text-xs">
+                                {v.name} <span className="block text-[8px] opacity-30 mt-1">{v.port}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            );
+
+            // --- VIEW: INSPECTION FORM ---
+            if (view === 'INSPECT_FORM') return (
+                <div className="p-6 pb-40">
+                    <button onClick={() => setView('INSPECTION_LIST')} className="text-[10px] font-black text-blue-500 mb-6 uppercase italic">← Cancel</button>
+                    <div className="glass p-6 rounded-[2.5rem] mb-6 border-b-4 border-emerald-500 text-center">
+                        <h2 className="text-xl font-black uppercase italic tracking-tighter">{activeVessel.name}</h2>
+                    </div>
+
+                    <div className="space-y-6">
+                        {/* POB & SIMOPS Section */}
+                        <div className="glass p-6 rounded-[2rem] space-y-4">
+                            <p className="text-[9px] font-black text-red-500 uppercase italic"><i className="fa-solid fa-users mr-2"></i> POB Counter</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <input type="number" placeholder="Crew" id="crew_cnt" />
+                                <input type="number" placeholder="Contractors" id="techn_cnt" />
+                            </div>
+                        </div>
+
+                        {/* Research Study Field */}
+                        <div className="glass p-6 rounded-[2rem] card-blue">
+                            <p className="text-[9px] font-black text-blue-400 uppercase italic mb-3"><i className="fa-solid fa-flask mr-2"></i> Study Research Notes</p>
+                            <textarea id="research_note" placeholder="Κατέγραψε ασυνήθιστες μεθόδους ή επικίνδυνα Near-Misses για τη μελέτη..." className="h-32 italic"></textarea>
+                        </div>
+                    </div>
+
                     <div className="fixed bottom-6 left-6 right-6">
-                        <button disabled={tasks.length === 0} onClick={onSign} className={`fat-finger w-full flex items-center justify-center gap-3 ${tasks.length > 0 ? 'bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-slate-900 opacity-40 text-slate-500'}`}>
-                            Finalize Report
-                        </button>
+                        <button onClick={() => {
+                            const newLog = { 
+                                id: Date.now(), 
+                                vessel: activeVessel.name, 
+                                note: document.getElementById('research_note').value,
+                                ts: new Date().toISOString() 
+                            };
+                            setLogs([newLog, ...logs]);
+                            setView('MAIN');
+                        }} className="fat-finger bg-emerald-600 shadow-xl shadow-emerald-900/40">Finalize & Log Data</button>
+                    </div>
+                </div>
+            );
+
+            // --- VIEW: STUDY FEED (REPORTS) ---
+            if (view === 'STUDY') return (
+                <div className="p-6">
+                    <button onClick={() => setView('MAIN')} className="text-[10px] font-black text-blue-500 mb-6 uppercase">← Back</button>
+                    <h2 className="text-xl font-black italic mb-6 text-sky-400 uppercase tracking-tighter underline decoration-sky-800">Research Data Feed</h2>
+                    <div className="space-y-4">
+                        {logs.map(l => (
+                            <div key={l.id} className="glass p-5 rounded-[2rem] border-l-2 border-sky-500/30">
+                                <p className="text-[11px] font-black text-sky-400 mb-2 uppercase">{l.vessel}</p>
+                                <p className="text-[10px] italic opacity-80 leading-relaxed">"{l.note || 'No notes added'}"</p>
+                                <p className="text-[7px] mt-3 opacity-30 font-black uppercase">{new Date(l.ts).toLocaleString()}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
         };
 
-        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV290 />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script></body></html>
