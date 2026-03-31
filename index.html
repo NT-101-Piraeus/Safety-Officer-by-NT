@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="el">
 <head>
-    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no text-align: center">
-    <title>NT Safety Commander | V3.1.0 Master Plan</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NT Safety Commander | V3.3.0 Research Matrix</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -12,73 +12,89 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
         body { background: #020617; color: white; font-family: 'Orbitron', sans-serif; font-style: italic; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .card-blue { border-left: 4px solid #3b82f6; }
-        .card-emerald { border-left: 4px solid #10b981; }
-        .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-        .progress-fill { height: 100%; background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
-        .fat-finger { height: 55px; border-radius: 1rem; font-weight: 900; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; font-size: 10px; }
+        .card-purple { border-left: 4px solid #a855f7; }
+        .fat-finger { height: 50px; border-radius: 1rem; font-weight: 900; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; font-size: 9px; cursor: pointer; }
     </style>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState } = React;
         const MASTER_PASSCODE = "2026";
 
         const App = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
             const [view, setView] = useState('MAIN');
-            const [logs, setLogs] = useState(() => JSON.parse(localStorage.getItem('ntg_M2_logs') || '[]'));
 
             if (!isAuthenticated) return (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
-                    <div className="glass p-10 rounded-[3rem] w-full max-w-sm text-center border-t-4 border-blue-500">
-                        <h2 className="text-xl font-black mb-6 italic tracking-widest uppercase">NT Secure Gate</h2>
+                    <div className="glass p-10 rounded-[3rem] w-full max-w-sm text-center border-t-4 border-purple-500">
+                        <h2 className="text-xl font-black mb-6 uppercase italic">NT Research System</h2>
                         <input type="password" onChange={(e) => e.target.value === MASTER_PASSCODE && setIsAuthenticated(true)} 
-                               className="bg-black/40 p-4 rounded-xl text-center text-2xl tracking-[0.5em] w-full outline-none" placeholder="****" />
+                               className="bg-black/40 p-4 rounded-xl text-center text-2xl tracking-[0.5em] w-full outline-none border border-white/10" placeholder="****" />
                     </div>
                 </div>
             );
 
             if (view === 'MAIN') return (
-                <div className="p-6 pb-20">
-                    {/* Career Milestone Widget */}
-                    <div className="glass p-6 rounded-[2.5rem] card-blue mb-8">
-                        <p className="text-[9px] font-black uppercase text-blue-400 mb-4 tracking-widest">Career Master Plan Progress</p>
-                        <div className="space-y-4">
-                            <div>
-                                <div className="flex justify-between text-[8px] font-black uppercase mb-1"><span>Safety App V3.1</span><span>85%</span></div>
-                                <div className="progress-bar"><div className="progress-fill" style={{width: '85%'}}></div></div>
+                <div className="p-6">
+                    {/* Research Matrix Widget */}
+                    <div className="glass p-6 rounded-[2.5rem] card-purple mb-8 bg-purple-500/5">
+                        <p className="text-[9px] font-black uppercase text-purple-400 mb-4 tracking-widest"><i className="fa-solid fa-layer-group mr-2"></i> Holistic Risk Matrix</p>
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+                                <span className="text-[9px] font-bold uppercase">Mechanical Risks</span>
+                                <span className="text-[8px] bg-purple-500/20 px-2 py-1 rounded text-purple-300 italic">Analysis Stage</span>
                             </div>
-                            <div>
-                                <div className="flex justify-between text-[8px] font-black uppercase mb-1"><span>Study/Thesis Research</span><span>20%</span></div>
-                                <div className="progress-bar"><div className="progress-fill" style={{width: '20%', background: '#f59e0b', boxShadow: '0 0 10px #f59e0b'}}></div></div>
+                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+                                <span className="text-[9px] font-bold uppercase">Atmospheric/Chemical</span>
+                                <span className="text-[8px] bg-purple-500/20 px-2 py-1 rounded text-purple-300 italic">Data Collection</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl">
+                                <span className="text-[9px] font-bold uppercase">Human Factor (SIMOPS)</span>
+                                <span className="text-[8px] bg-purple-500/20 px-2 py-1 rounded text-purple-300 italic">Literature Review</span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Duty Radar Bar */}
-                    <div className="glass p-5 rounded-[2rem] border-l-4 border-white/20 mb-8">
-                        <p className="text-[8px] opacity-40 font-black uppercase mb-2">Today's Duty</p>
-                        <p className="text-[10px] font-black uppercase italic text-blue-300">SALAMIS (07:00) | FELIX (11:00)</p>
+                    {/* Navigation */}
+                    <div className="grid grid-cols-1 gap-3">
+                        <button onClick={() => setView('BIBLIOGRAPHY')} className="fat-finger bg-purple-700 shadow-lg"><i className="fa-solid fa-book"></i> Bibliography Vault</button>
+                        <button onClick={() => setView('INSPECTION')} className="fat-finger bg-blue-600"><i className="fa-solid fa-clipboard-list"></i> Field Operations</button>
+                        <button onClick={() => setView('STUDY')} className="fat-finger bg-sky-700"><i className="fa-solid fa-microscope"></i> Study Database</button>
                     </div>
 
-                    {/* Main Actions */}
-                    <div className="grid grid-cols-1 gap-4">
-                        <button onClick={() => setView('INSPECTION')} className="fat-finger bg-blue-600"><i className="fa-solid fa-clipboard-check"></i> Daily Inspection</button>
-                        <button onClick={() => setView('ACADEMY')} className="fat-finger bg-emerald-600"><i className="fa-solid fa-graduation-cap"></i> NT Academy</button>
-                        <button onClick={() => setView('STUDY')} className="fat-finger bg-sky-700"><i className="fa-solid fa-book-open"></i> Research Log</button>
+                    <div className="mt-10 p-4 text-center opacity-30">
+                        <p className="text-[7px] font-black uppercase tracking-[0.4em]">Nautical Technology Research Division</p>
                     </div>
-
-                    <p className="text-center mt-10 text-[7px] opacity-30 font-black uppercase tracking-[0.3em]">Engineering the future of Maritime Safety</p>
                 </div>
             );
 
-            // Placeholder views for navigation
+            if (view === 'BIBLIOGRAPHY') return (
+                <div className="p-6">
+                    <button onClick={() => setView('MAIN')} className="text-[10px] font-black text-blue-500 mb-6 uppercase italic">← Back</button>
+                    <h2 className="text-xl font-black italic mb-6 text-purple-400 uppercase tracking-tighter">Bibliography Vault</h2>
+                    <div className="space-y-4">
+                        <div className="glass p-5 rounded-2xl border-l-2 border-white/10">
+                            <p className="text-[10px] font-black text-purple-300 uppercase">ISGOTT 6th Edition</p>
+                            <p className="text-[9px] opacity-60 italic mt-1">Tanker safety and atmospheric monitoring protocols.</p>
+                        </div>
+                        <div className="glass p-5 rounded-2xl border-l-2 border-white/10">
+                            <p className="text-[10px] font-black text-purple-300 uppercase">IMO ISM Code</p>
+                            <p className="text-[9px] opacity-60 italic mt-1">International standards for safe management of ships.</p>
+                        </div>
+                        <div className="glass p-5 rounded-2xl border-l-2 border-white/10">
+                            <p className="text-[10px] font-black text-purple-300 uppercase">OSHA 1915 Subpart B</p>
+                            <p className="text-[9px] opacity-60 italic mt-1">Confined and Enclosed Spaces in Shipyard Employment.</p>
+                        </div>
+                    </div>
+                </div>
+            );
+
             return (
                 <div className="p-6">
-                    <button onClick={() => setView('MAIN')} className="text-[10px] font-black text-blue-500 mb-6 uppercase">← Return to Bridge</button>
-                    <div className="glass p-10 rounded-[3rem] text-center italic opacity-50 uppercase font-black text-xs">Section Under Construction...</div>
+                    <button onClick={() => setView('MAIN')} className="text-[10px] font-black text-blue-500 mb-6 uppercase italic">← Back</button>
+                    <div className="glass p-10 rounded-[3rem] text-center italic opacity-40 uppercase font-black text-[10px]">Data Collection Active</div>
                 </div>
             );
         };
