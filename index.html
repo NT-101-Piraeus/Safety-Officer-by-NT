@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Safety Officer | V2.7.2 Override</title>
+    <title>Safety Officer | V2.8.0 Fitness Style</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -11,8 +11,12 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
         body { background: #020617; color: white; font-family: 'Orbitron', sans-serif; font-style: italic; }
-        .glass { background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .fat-finger { height: 70px; font-weight: 900; text-transform: uppercase; border-radius: 1.2rem; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; width: 100%; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .fitness-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); }
+        .fitness-active { background: #10b981; border-color: #10b981; box-shadow: 0 0 10px #10b981; }
+        .vessel-card { transition: all 0.3s; border-left: 4px solid #3b82f6; }
+        .vessel-done { border-left-color: #10b981; opacity: 0.6; }
+        .fat-finger { height: 65px; border-radius: 1.2rem; font-weight: 900; text-transform: uppercase; transition: 0.2s; }
         select { background: #1e293b; border: 1px solid #334155; padding: 15px; border-radius: 1rem; color: white; width: 100%; font-weight: bold; text-transform: uppercase; font-size: 11px; }
     </style>
 </head>
@@ -22,164 +26,139 @@
         const { useState, useEffect } = React;
 
         const MASTER_PASSCODE = "2026";
-        
-        const SAFETY_TIPS = {
-            "Scaffolding": "ADVICE: Check base plates, green tags, and harness points. Wind < 20kts.",
-            "Enclosed Space Entry": "ADVICE: Confirm Chemist Certificate. Continuous ventilation. Standby person present.",
-            "Hot Works": "ADVICE: Fire blanket & extinguishers. Fire watch 30m post-work.",
-            "Lifting Ops": "ADVICE: Check SWL/Slings. Clear lifting zone. Radio comms check.",
-            "Tank Cleaning": "ADVICE: Proper PPE for chemicals. Lighting 24V. Emergency escape clear."
-        };
-
-        const WORK_AREAS = {
-            "Main Deck": ["Hot Works", "Painting", "Scaffolding", "Lifting Ops", "Grinding"],
-            "Double Bottoms (DB)": ["Enclosed Space Entry", "Tank Cleaning", "Welding", "Inspection"],
-            "Engine Room": ["Maintenance", "Electrical Works", "Insulation", "Hot Works"],
-            "Pump Room": ["Valve Overhaul", "Bilge Check", "Pipe Works"]
-        };
-
         const SEPE_SCHEDULE = [
-            { id: 'SAL01', name: 'SALAMIS SHIPREPAIR', afm: '801861870', loc: 'Τεύκρου 48', shift: '07:00-11:00' },
-            { id: 'SAL02', name: 'ΣΑΛΑΜΙΣ ΝΑΥΠΗΓΕΙΑ', afm: '800372043', loc: 'Αμπελάκια', shift: '11:00-15:00' },
-            { id: 'ALX01', name: 'MT FELIX', loc: 'Alexandroupolis FSRU', shift: '07:00-11:00' },
-            { id: 'ALX02', name: 'BADJI MOKHTAR III', loc: 'Alexandroupolis FSRU', shift: '11:00-13:00' }
+            { id: 'SAL01', name: 'SALAMIS SHIPREPAIR', loc: 'Τεύκρου 48' },
+            { id: 'SAL02', name: 'ΣΑΛΑΜΙΣ ΝΑΥΠΗΓΕΙΑ', loc: 'Αμπελάκια' },
+            { id: 'ALX01', name: 'MT FELIX', loc: 'FSRU ALX' },
+            { id: 'ALX02', name: 'BADJI MOKHTAR III', loc: 'FSRU ALX' }
         ];
 
-        const SafetyOfficerV272 = () => {
+        const WORK_AREAS = {
+            "Garage/Deck": ["Hot Works", "Lifting", "Scaffolding", "Upholstery"],
+            "Accommodation": ["Electrical", "Carpentry", "Insulation", "AC Repair"],
+            "Engine/DB": ["Welding", "Cleaning", "Tank Entry", "Pipework"]
+        };
+
+        const SafetyOfficerV280 = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
-            const [view, setView] = useState('WATCHLIST');
+            const [view, setView] = useState('RADAR'); // Fitness Radar
             const [logs, setLogs] = useState(() => JSON.parse(localStorage.getItem('ntg_M2_logs') || '[]'));
-            const [completedVessels, setCompletedVessels] = useState(() => JSON.parse(localStorage.getItem('ntg_completed_today') || '{}'));
-            
+            const [completedToday, setCompletedToday] = useState(() => JSON.parse(localStorage.getItem('ntg_done_today') || '[]'));
             const [activeVessel, setActiveVessel] = useState(null);
-            const [selectedArea, setSelectedArea] = useState("");
-            const [selectedTasks, setSelectedTasks] = useState([]);
-            const [remarks, setRemarks] = useState("");
-            const [photoCount, setPhotoCount] = useState(0);
-
+            
+            // --- PERSISTENCE ---
             useEffect(() => { localStorage.setItem('ntg_M2_logs', JSON.stringify(logs)); }, [logs]);
-            useEffect(() => { localStorage.setItem('ntg_completed_today', JSON.stringify(completedVessels)); }, [completedVessels]);
+            useEffect(() => { localStorage.setItem('ntg_done_today', JSON.stringify(completedToday)); }, [completedToday]);
 
-            const handleSign = () => {
-                const newLog = { 
-                    id: Date.now(), vessel: activeVessel.name, ts: new Date().toLocaleString('el-GR'), 
-                    area: selectedArea, tasks: selectedTasks, remarks, photos: photoCount 
-                };
-                setLogs([newLog, ...logs]);
-                setCompletedVessels({...completedVessels, [activeVessel.id]: true});
-                setView('WATCHLIST');
+            const handleSign = (data) => {
+                const newEntry = { id: Date.now(), vessel: activeVessel.name, ts: new Date().toISOString(), ...data };
+                setLogs([newEntry, ...logs]);
+                if (!completedToday.includes(activeVessel.id)) {
+                    setCompletedToday([...completedToday, activeVessel.id]);
+                }
+                setView('RADAR');
             };
 
             if (!isAuthenticated) return (
                 <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
-                    <div className="glass p-10 rounded-[2.5rem] w-full max-w-sm text-center border-t-4 border-blue-500 font-black italic">
-                        <h2 className="text-xl mb-6 uppercase tracking-tighter">Secure Access</h2>
+                    <div className="glass p-10 rounded-[3rem] w-full max-w-sm text-center border-t-4 border-blue-500">
+                        <h2 className="text-xl font-black mb-6 italic">NT SECURE</h2>
                         <input type="password" onChange={(e) => e.target.value === MASTER_PASSCODE && setIsAuthenticated(true)} 
-                               className="w-full bg-black/40 p-5 rounded-xl text-center text-2xl tracking-[0.5em] outline-none border border-white/10" placeholder="****" />
+                               className="w-full bg-black/40 p-5 rounded-xl text-center text-2xl tracking-[0.5em] outline-none" placeholder="****" />
                     </div>
                 </div>
             );
 
-            if (view === 'WATCHLIST') return (
+            // --- VIEW: WEEKLY FITNESS RADAR ---
+            if (view === 'RADAR') return (
                 <div className="p-6">
-                    <header className="glass p-6 rounded-[2rem] border-l-4 border-blue-500 mb-8">
-                        <div className="flex justify-between items-center mb-4">
-                            <h1 className="text-sm font-black text-blue-500 uppercase tracking-tighter">Safety Radar</h1>
-                            <button onClick={() => setView('DASHBOARD')} className="text-blue-400 text-[10px] font-black uppercase underline">Diary History</button>
+                    <header className="glass p-6 rounded-[2.5rem] mb-8 flex justify-between items-center border-b border-blue-500/20">
+                        <div><h1 className="text-xs font-black text-blue-500 uppercase tracking-tighter">Safety Fitness</h1><p className="text-[10px] opacity-40 uppercase">Week 14 | 2026</p></div>
+                        <div className="flex gap-2">
+                            {[0,1,2,3,4,5,6].map(d => <div key={d} className={`fitness-dot ${d === new Date().getDay() ? 'fitness-active' : ''}`}></div>)}
                         </div>
-                        <button onClick={() => {setActiveVessel(null); setView('OVERRIDE');}} className="w-full bg-orange-600/20 border border-orange-500/50 text-orange-400 h-12 rounded-xl text-[10px] font-black uppercase italic"><i className="fa-solid fa-bolt mr-2"></i>Extra-Curricular Inspection</button>
                     </header>
+
+                    <div className="mb-6"><p className="text-[10px] font-black opacity-30 uppercase ml-2 mb-4 tracking-widest italic">Today's Inspection Checklist</p></div>
+                    
                     <div className="space-y-4">
-                        <p className="text-[9px] opacity-30 font-black uppercase ml-2 tracking-widest">Scheduled Shift</p>
-                        {SEPE_SCHEDULE.map(v => (
-                            <div key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); setSelectedArea(""); setSelectedTasks([]); setRemarks(""); setPhotoCount(0); }} 
-                                 className="glass p-6 rounded-[2.5rem] flex justify-between items-center border-l-4 border-blue-600 active:scale-95 transition-all">
-                                <div><p className="text-xs font-black uppercase italic">{v.name}</p><p className="text-[8px] opacity-40 uppercase font-black">{v.shift} | {v.loc}</p></div>
-                                {completedVessels[v.id] && <i className="fa-solid fa-check-circle text-emerald-500 text-xl"></i>}
-                            </div>
-                        ))}
+                        {SEPE_SCHEDULE.map(v => {
+                            const isDone = completedToday.includes(v.id);
+                            return (
+                                <div key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); }}
+                                     className={`glass p-6 rounded-[2rem] vessel-card flex justify-between items-center ${isDone ? 'vessel-done' : ''}`}>
+                                    <div>
+                                        <p className="text-xs font-black uppercase italic">{v.name}</p>
+                                        <p className="text-[8px] opacity-40 uppercase font-black">{v.loc}</p>
+                                    </div>
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${isDone ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-white/10 text-white/10'}`}>
+                                        <i className={`fa-solid ${isDone ? 'fa-check' : 'fa-circle text-[6px]'}`}></i>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
+
+                    <button onClick={() => setCompletedToday([])} className="mt-10 w-full text-[8px] opacity-20 uppercase font-black tracking-widest italic underline">Reset Daily Checklist</button>
                 </div>
             );
 
-            if (view === 'OVERRIDE') return (
-                <div className="p-6">
-                    <button onClick={() => setView('WATCHLIST')} className="text-[10px] font-black text-blue-500 mb-6 uppercase">← Cancel</button>
-                    <h2 className="text-xl font-black italic mb-6 text-orange-500 uppercase tracking-tighter">Manual Site Selection</h2>
-                    <div className="space-y-4">
-                        {SEPE_SCHEDULE.map(v => (
-                            <button key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); setSelectedArea(""); setSelectedTasks([]); setRemarks(""); setPhotoCount(0); }} 
-                                    className="glass w-full p-6 rounded-[2rem] text-left border-l-4 border-orange-600 font-black uppercase italic text-xs tracking-tight">
-                                {v.name} <span className="block text-[8px] opacity-40 mt-1">{v.loc}</span>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            );
+            // --- VIEW: IMPROVED VESSEL MENU ---
+            return <VesselInspection vessel={activeVessel} onSign={handleSign} onBack={() => setView('RADAR')} />;
+        };
 
-            if (view === 'DASHBOARD') return (
-                <div className="p-6 pb-20">
-                    <button onClick={() => setView('WATCHLIST')} className="text-[10px] font-black text-blue-500 mb-6 uppercase">← Back</button>
-                    <h2 className="text-lg font-black italic mb-6 text-blue-500 uppercase tracking-tighter tracking-tighter">Shift Diary</h2>
-                    <div className="space-y-4">
-                        {logs.map(log => (
-                            <div key={log.id} className="glass p-6 rounded-[2rem] border-l-2 border-white/20">
-                                <p className="text-[11px] font-black uppercase text-blue-400">{log.vessel} <span className="text-[8px] opacity-30 italic">({log.ts})</span></p>
-                                <p className="text-[9px] font-bold uppercase text-emerald-500 mt-2">Area: {log.area}</p>
-                                <p className="text-[9px] opacity-70 uppercase font-black">Tasks: {log.tasks.join(", ")}</p>
-                                {log.remarks && <p className="text-[9px] mt-2 bg-black/40 p-3 rounded italic">Notes: {log.remarks}</p>}
-                                <p className="text-[7px] mt-2 opacity-20 font-black uppercase">Photos: {log.photos}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            );
+        const VesselInspection = ({ vessel, onSign, onBack }) => {
+            const [step, setStep] = useState(1);
+            const [selectedArea, setSelectedArea] = useState("");
+            const [tasks, setTasks] = useState([]);
+            const [remarks, setRemarks] = useState("");
 
             return (
-                <div className="p-6 pb-64">
-                    <button onClick={() => setView('WATCHLIST')} className="text-[9px] font-black text-blue-500 mb-6 uppercase italic">← Exit</button>
-                    <div className="glass p-6 rounded-[2rem] border-l-4 border-emerald-500 mb-6 text-center">
-                        <h2 className="text-xl font-black uppercase italic tracking-tighter">{activeVessel.name}</h2>
-                        <p className="text-[8px] opacity-40 mt-1 uppercase font-black">{activeVessel.loc} {activeVessel.afm ? `| AFM: ${activeVessel.afm}` : ""}</p>
+                <div className="p-6 pb-40">
+                    <button onClick={onBack} className="text-[10px] font-black text-blue-500 mb-8 uppercase italic">← Back to Radar</button>
+                    
+                    <div className="glass p-8 rounded-[2.5rem] mb-6 text-center border-b-4 border-emerald-500">
+                        <h2 className="text-2xl font-black uppercase italic tracking-tighter">{vessel.name}</h2>
+                        <p className="text-[8px] opacity-40 mt-1 uppercase">Inspection in Progress</p>
                     </div>
 
                     <div className="space-y-6">
+                        {/* STEP 1: Area & Tasks */}
                         <div className="glass p-6 rounded-[2rem] space-y-4">
-                            <select onChange={(e) => {setSelectedArea(e.target.value); setSelectedTasks([]);}}>
+                            <label className="text-[9px] font-black opacity-30 uppercase tracking-widest">1. Select Workspace</label>
+                            <select onChange={(e) => setSelectedArea(e.target.value)}>
                                 <option value="">Select Area...</option>
                                 {Object.keys(WORK_AREAS).map(a => <option key={a} value={a}>{a}</option>)}
                             </select>
                             
                             {selectedArea && (
-                                <div className="space-y-2">
-                                    {WORK_AREAS[selectedArea].map(task => (
-                                        <div key={task} className="space-y-2">
-                                            <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl"><input type="checkbox" onChange={(e) => {
-                                                    const newTasks = e.target.checked ? [...selectedTasks, task] : selectedTasks.filter(t => t !== task);
-                                                    setSelectedTasks(newTasks);
-                                                }} className="w-5 h-5 accent-emerald-500" /><span className="text-[10px] font-black uppercase italic">{task}</span></label>
-                                            {selectedTasks.includes(task) && SAFETY_TIPS[task] && (<div className="p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-[9px] text-blue-400 font-black italic"><i className="fa-solid fa-shield-halved mr-2"></i>{SAFETY_TIPS[task]}</div>)}
-                                        </div>
+                                <div className="grid grid-cols-1 gap-2 pt-2">
+                                    {WORK_AREAS[selectedArea].map(t => (
+                                        <label key={t} className="flex items-center gap-3 p-4 bg-white/5 rounded-xl text-[10px] font-black uppercase">
+                                            <input type="checkbox" onChange={(e) => e.target.checked ? setTasks([...tasks, t]) : setTasks(tasks.filter(x => x !== t))} className="w-5 h-5 accent-emerald-500" />
+                                            {t}
+                                        </label>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        <div className="glass p-6 rounded-[2rem] space-y-2">
-                            <p className="text-[9px] font-black opacity-40 uppercase tracking-widest italic">Inspector Remarks</p>
-                            <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Type findings..." className="w-full bg-black/20 p-4 rounded-xl text-[10px] h-32 outline-none border border-white/5 font-black" />
+                        {/* STEP 2: Remarks */}
+                        <div className="glass p-6 rounded-[2rem] space-y-4">
+                            <label className="text-[9px] font-black opacity-30 uppercase tracking-widest">2. Forensic Observations</label>
+                            <textarea value={remarks} onChange={(e) => setRemarks(e.target.value)} placeholder="Type here..." className="w-full bg-black/20 p-4 rounded-xl text-[10px] h-32 outline-none border border-white/5 font-black" />
                         </div>
                     </div>
 
-                    <div className="fixed bottom-6 left-6 right-6 space-y-3 glass p-4 rounded-[2rem] border-t border-white/10 z-50">
-                        <div className="relative">
-                            <input type="file" accept="image/*" capture="camera" onChange={() => setPhotoCount(prev => prev + 1)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                            <button className="fat-finger bg-slate-800 text-[10px] pointer-events-none tracking-widest italic"><i className="fa-solid fa-camera mr-2"></i>Capture Photo ({photoCount}/2)</button>
-                        </div>
-                        <button disabled={photoCount < 2 || selectedTasks.length === 0} onClick={handleSign} className={`fat-finger ${photoCount >= 2 && selectedTasks.length > 0 ? 'bg-emerald-600' : 'bg-slate-900 opacity-40 text-slate-500'} text-[10px] tracking-widest italic`}>Sign Daily Report</button>
+                    <div className="fixed bottom-6 left-6 right-6">
+                        <button disabled={tasks.length === 0} onClick={() => onSign({ area: selectedArea, tasks, remarks })} 
+                                className={`fat-finger w-full flex items-center justify-center gap-3 ${tasks.length > 0 ? 'bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-slate-900 opacity-40 text-slate-500'}`}>
+                            <i className="fa-solid fa-signature"></i> Finalize & Mark as Done
+                        </button>
                     </div>
                 </div>
             );
         };
-        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV272 />);
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV280 />);
     </script></body></html>
