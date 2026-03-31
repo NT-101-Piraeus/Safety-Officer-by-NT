@@ -2,7 +2,7 @@
 <html lang="el">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Safety Officer | V2.8.5 Legal Intelligence</title>
+    <title>Safety Officer | V2.9.0 Academy Edition</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -12,8 +12,9 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
         body { background: #020617; color: white; font-family: 'Orbitron', sans-serif; font-style: italic; }
         .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); }
-        .fitness-active { background: #10b981; border-color: #10b981; box-shadow: 0 0 10px #10b981; }
-        .law-card { border-left: 3px solid #eab308; background: rgba(234, 179, 8, 0.05); }
+        .fitness-active { background: #10b981; box-shadow: 0 0 10px #10b981; }
+        .fat-finger { height: 65px; border-radius: 1.2rem; font-weight: 900; text-transform: uppercase; transition: 0.2s; }
+        input[type="number"] { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 10px; border-radius: 0.8rem; }
     </style>
 </head>
 <body>
@@ -23,54 +24,63 @@
 
         const MASTER_PASSCODE = "2026";
         
-        // --- DATABASE: Π.Δ. 70/90 LIBRARY ---
-        const PD7090_ARTICLES = {
-            "Άρθρο 15": "Καθαρισμός χώρων από εύφλεκτα υλικά και απορρίμματα εργασιών.",
-            "Άρθρο 17": "Μέτρα πυροπροστασίας κατά τη διάρκεια θερμών εργασιών.",
-            "Άρθρο 30": "Ηλεκτρικές εγκαταστάσεις και προσωρινά δίκτυα φωτισμού.",
-            "Άρθρο 45": "Προδιαγραφές ασφαλείας για σκαλωσιές (ικριώματα) και εξέδρες.",
-            "Άρθρο 52": "Προστασία έναντι πτώσης από ύψος και χρήση ζωνών ασφαλείας."
-        };
+        // --- ACADEMY KNOWLEDGE BASE ---
+        const ACADEMY_CHAPTERS = [
+            {
+                id: 'CH1', title: 'Θερμές Εργασίες (Αμπάρια/Σωλήνες)', 
+                content: '1. Έκδοση Πιστοποιητικού Χημικού Ναυτιλίας.\n2. Τάπωμα δικτύων & απομόνωση (LOTO).\n3. Συνεχής εξαερισμός & μέτρηση LEL/O2.\n4. Πυροπροστασία με κουβέρτες & Fire Watch.'
+            },
+            {
+                id: 'CH2', title: 'Αποσυναρμολόγηση Στροφάλου', 
+                content: '1. Έλεγχος SWL ανυψωτικών μέσων (παλάγκα).\n2. Σωστή στήριξη (blocking) της μηχανής.\n3. Χρήση ΜΑΠ (κράνος, γάντια βαρέως τύπου).\n4. Συντονισμός κινήσεων - Safe Zones.'
+            },
+            {
+                id: 'CH3', title: 'Επισκευή Καταπέλτη (Ramp)', 
+                content: '1. Ασφάλιση καταπέλτη με μηχανικά μέσα (chains/pins).\n2. Έλεγχος υδραυλικών πιέσεων (Zero Energy).\n3. Αποκλεισμός περιοχής από κάτω.\n4. Εργασία σε ύψος - Χρήση Harness.'
+            }
+        ];
 
-        const SafetyOfficerV285 = () => {
+        const SEPE_SCHEDULE = [
+            { id: 'SAL01', name: 'SALAMIS SHIPREPAIR', loc: 'Τεύκρου 48' },
+            { id: 'ALX01', name: 'MT FELIX', loc: 'FSRU ALX' }
+        ];
+
+        const SafetyOfficerV290 = () => {
             const [isAuthenticated, setIsAuthenticated] = useState(false);
-            const [view, setView] = useState('RADAR'); 
-            const [logs, setLogs] = useState(() => JSON.parse(localStorage.getItem('ntg_M2_logs') || '[]'));
+            const [view, setView] = useState('RADAR');
             const [completedToday, setCompletedToday] = useState(() => JSON.parse(localStorage.getItem('ntg_done_today') || '[]'));
             const [activeVessel, setActiveVessel] = useState(null);
 
-            useEffect(() => { localStorage.setItem('ntg_M2_logs', JSON.stringify(logs)); }, [logs]);
-            useEffect(() => { localStorage.setItem('ntg_done_today', JSON.stringify(completedToday)); }, [completedToday]);
-
             if (!isAuthenticated) return (
-                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950 text-center">
-                    <div className="glass p-10 rounded-[3rem] w-full max-w-sm border-t-4 border-blue-500">
-                        <h2 className="text-xl font-black mb-6 italic">NT SECURE</h2>
+                <div className="min-h-screen flex items-center justify-center p-6 bg-slate-950">
+                    <div className="glass p-10 rounded-[3rem] w-full max-w-sm text-center border-t-4 border-blue-500">
+                        <h2 className="text-xl font-black mb-6 italic tracking-widest">NT SECURE</h2>
                         <input type="password" onChange={(e) => e.target.value === MASTER_PASSCODE && setIsAuthenticated(true)} 
-                               className="w-full bg-black/40 p-5 rounded-xl text-center text-2xl tracking-[0.5em] outline-none" placeholder="****" />
+                               className="w-full bg-black/40 p-5 rounded-xl text-center text-2xl tracking-[0.5em] outline-none border border-white/10" placeholder="****" />
                     </div>
                 </div>
             );
 
-            // --- VIEW: CENTRAL RADAR ---
             if (view === 'RADAR') return (
                 <div className="p-6">
-                    <header className="glass p-6 rounded-[2.5rem] mb-6 flex justify-between items-center">
-                        <h1 className="text-xs font-black text-blue-500 uppercase">Fitness Radar</h1>
+                    <header className="glass p-6 rounded-[2.5rem] mb-6 flex justify-between items-center border-b border-blue-500/20">
+                        <div><h1 className="text-xs font-black text-blue-500 uppercase">Fitness Radar</h1><p className="text-[10px] opacity-40 uppercase">V2.9.0 Operations</p></div>
                         <div className="flex gap-2">
                             {[0,1,2,3,4,5,6].map(d => <div key={d} className={`w-2 h-2 rounded-full ${d === new Date().getDay() ? 'fitness-active' : 'bg-white/10'}`}></div>)}
                         </div>
                     </header>
 
-                    <div className="grid grid-cols-2 gap-3 mb-8">
-                        <button onClick={() => setView('PD_LIBRARY')} className="glass p-4 rounded-2xl text-[9px] font-black uppercase text-yellow-500 border border-yellow-500/20"><i className="fa-solid fa-gavel mb-2 block text-lg"></i> Π.Δ. 70/90</button>
-                        <button onClick={() => alert("Vault Sync Ready (Standing By)")} className="glass p-4 rounded-2xl text-[9px] font-black uppercase text-sky-400 border border-sky-500/20"><i className="fa-solid fa-database mb-2 block text-lg"></i> Vault Link</button>
-                    </div>
+                    <button onClick={() => setView('ACADEMY')} className="w-full glass p-5 rounded-[2rem] mb-8 border-l-4 border-emerald-500 flex justify-between items-center active:scale-95 transition-all">
+                        <span className="text-[11px] font-black uppercase italic tracking-widest"><i className="fa-solid fa-graduation-cap mr-3"></i> Safety Academy</span>
+                        <i className="fa-solid fa-chevron-right opacity-30"></i>
+                    </button>
 
                     <div className="space-y-4">
-                        {[{id:'SAL01', name:'SALAMIS SHIPREPAIR'}, {id:'ALX01', name:'MT FELIX'}].map(v => (
-                            <div key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); }} className={`glass p-6 rounded-[2rem] border-l-4 ${completedToday.includes(v.id) ? 'border-emerald-500 opacity-50' : 'border-blue-500'} flex justify-between items-center`}>
-                                <p className="text-xs font-black uppercase">{v.name}</p>
+                        <p className="text-[9px] opacity-30 font-black uppercase ml-2 tracking-widest">Daily Checklist</p>
+                        {SEPE_SCHEDULE.map(v => (
+                            <div key={v.id} onClick={() => { setActiveVessel(v); setView('INSPECTION'); }} 
+                                 className={`glass p-6 rounded-[2rem] border-l-4 ${completedToday.includes(v.id) ? 'border-emerald-500 opacity-40' : 'border-blue-600'} flex justify-between items-center`}>
+                                <div><p className="text-xs font-black uppercase italic">{v.name}</p><p className="text-[8px] opacity-40 uppercase">{v.loc}</p></div>
                                 {completedToday.includes(v.id) && <i className="fa-solid fa-check text-emerald-500"></i>}
                             </div>
                         ))}
@@ -78,65 +88,68 @@
                 </div>
             );
 
-            // --- VIEW: Π.Δ. 70/90 LIBRARY ---
-            if (view === 'PD_LIBRARY') return (
+            if (view === 'ACADEMY') return (
                 <div className="p-6">
-                    <button onClick={() => setView('RADAR')} className="text-[10px] font-black text-blue-500 mb-8 uppercase">← Back</button>
-                    <h2 className="text-xl font-black text-yellow-500 italic mb-6 uppercase tracking-tighter">Νομοθεσία Π.Δ. 70/90</h2>
+                    <button onClick={() => setView('RADAR')} className="text-[10px] font-black text-blue-500 mb-8 uppercase italic">← Return</button>
+                    <h2 className="text-xl font-black italic text-emerald-500 mb-6 uppercase tracking-tighter">Safety Academy</h2>
                     <div className="space-y-4">
-                        {Object.entries(PD7090_ARTICLES).map(([art, desc]) => (
-                            <div key={art} className="glass p-5 rounded-2xl law-card">
-                                <p className="text-[11px] font-black text-yellow-500 mb-2">{art}</p>
-                                <p className="text-[10px] leading-relaxed opacity-80">{desc}</p>
+                        {ACADEMY_CHAPTERS.map(ch => (
+                            <div key={ch.id} className="glass p-6 rounded-[2rem] border-l-2 border-emerald-500/30">
+                                <h3 className="text-xs font-black uppercase mb-3 text-emerald-400">{ch.title}</h3>
+                                <p className="text-[10px] leading-relaxed opacity-70 whitespace-pre-line">{ch.content}</p>
                             </div>
                         ))}
                     </div>
                 </div>
             );
 
-            // --- VIEW: INSPECTION & ADVISOR ---
-            return <VesselInspection vessel={activeVessel} onSign={() => { setCompletedToday([...completedToday, activeVessel.id]); setView('RADAR'); }} onBack={() => setView('RADAR')} />;
+            return <VesselInspection vessel={activeVessel} onSign={() => { 
+                setCompletedToday([...completedToday, activeVessel.id]); 
+                localStorage.setItem('ntg_done_today', JSON.stringify([...completedToday, activeVessel.id]));
+                setView('RADAR'); 
+            }} onBack={() => setView('RADAR')} />;
         };
 
         const VesselInspection = ({ vessel, onSign, onBack }) => {
-            const [selectedTasks, setSelectedTasks] = useState([]);
+            const [pob, setPob] = useState({ crew: 0, techn: 0 });
+            const [tasks, setTasks] = useState([]);
+
             return (
                 <div className="p-6 pb-40">
-                    <button onClick={onBack} className="text-[10px] font-black text-blue-500 mb-8 uppercase">← Exit</button>
-                    <div className="glass p-8 rounded-[2.5rem] mb-6 border-b-4 border-emerald-500 text-center uppercase italic">
-                        <h2 className="text-2xl font-black">{vessel.name}</h2>
+                    <button onClick={onBack} className="text-[10px] font-black text-blue-500 mb-8 uppercase italic">← Back</button>
+                    <div className="glass p-6 rounded-[2.5rem] mb-6 border-b-4 border-emerald-500 text-center uppercase italic">
+                        <h2 className="text-xl font-black">{vessel.name}</h2>
+                    </div>
+
+                    <div className="glass p-6 rounded-[2rem] mb-6 space-y-4">
+                        <p className="text-[9px] font-black text-red-500 uppercase"><i className="fa-solid fa-users-gear mr-2"></i> POB Counter (Emergency)</p>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><p className="text-[7px] opacity-40 uppercase mb-1">Crew</p><input type="number" onChange={e => setPob({...pob, crew: e.target.value})} className="w-full text-center font-black" placeholder="0" /></div>
+                            <div><p className="text-[7px] opacity-40 uppercase mb-1">Contractors</p><input type="number" onChange={e => setPob({...pob, techn: e.target.value})} className="w-full text-center font-black" placeholder="0" /></div>
+                        </div>
+                        <p className="text-center text-lg font-black text-red-500">{Number(pob.crew) + Number(pob.techn)} Total</p>
                     </div>
 
                     <div className="glass p-6 rounded-[2rem] mb-6">
-                        <p className="text-[10px] font-black opacity-30 uppercase mb-4">Επιλογή Εργασιών Ημέρας</p>
-                        <div className="grid grid-cols-1 gap-2">
-                            {["Σκαλωσιές", "Ηλεκτρολογικά", "Ταπετσαρίες", "Καθαρισμοί"].map(t => (
-                                <label key={t} className="flex items-center gap-3 p-4 bg-white/5 rounded-xl text-[10px] font-black uppercase">
-                                    <input type="checkbox" onChange={(e) => e.target.checked ? setSelectedTasks([...selectedTasks, t]) : setSelectedTasks(selectedTasks.filter(x => x !== t))} className="w-5 h-5 accent-emerald-500" />
+                        <p className="text-[9px] font-black opacity-30 uppercase mb-4">Inspection Checklist</p>
+                        <div className="space-y-2">
+                            {["Hot Works", "Lifting", "Scaffolding", "Painting"].map(t => (
+                                <label key={t} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl text-[10px] font-black uppercase italic">
+                                    <input type="checkbox" onChange={e => e.target.checked ? setTasks([...tasks, t]) : setTasks(tasks.filter(x => x !== t))} className="w-5 h-5 accent-emerald-500" />
                                     {t}
                                 </label>
                             ))}
                         </div>
                     </div>
 
-                    {selectedTasks.length > 0 && (
-                        <div className="glass p-6 rounded-[2rem] border-l-4 border-blue-400 bg-blue-500/5 mb-6">
-                            <h3 className="text-[10px] font-black text-blue-400 uppercase mb-4"><i className="fa-solid fa-lightbulb mr-2"></i> Safety Measures of the Day</h3>
-                            <ul className="space-y-3 text-[9px] font-bold uppercase italic opacity-90">
-                                {selectedTasks.includes("Σκαλωσιές") && <li>• Επιθεώρηση βάσεων & Green Tags (Άρθρο 45).</li>}
-                                {selectedTasks.includes("Καθαρισμοί") && <li>• Άμεση απομάκρυνση εύφλεκτων υλικών (Άρθρο 15).</li>}
-                                {selectedTasks.includes("Ηλεκτρολογικά") && <li>• Έλεγχος μονώσεων & χρήση πυρίμαχης κουβέρτας (Άρθρο 30).</li>}
-                                {selectedTasks.includes("Ταπετσαρίες") && <li>• Μη χρήση γυμνής φλόγας κοντά σε αφρολέξ.</li>}
-                            </ul>
-                        </div>
-                    )}
-
                     <div className="fixed bottom-6 left-6 right-6">
-                        <button onClick={onSign} className="fat-finger w-full bg-emerald-600 flex items-center justify-center gap-3 font-black tracking-widest italic text-[11px] h-[65px] rounded-[1.2rem]">Finalize & Log Report</button>
+                        <button disabled={tasks.length === 0} onClick={onSign} className={`fat-finger w-full flex items-center justify-center gap-3 ${tasks.length > 0 ? 'bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.3)]' : 'bg-slate-900 opacity-40 text-slate-500'}`}>
+                            Finalize Report
+                        </button>
                     </div>
                 </div>
             );
         };
 
-        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV285 />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<SafetyOfficerV290 />);
     </script></body></html>
